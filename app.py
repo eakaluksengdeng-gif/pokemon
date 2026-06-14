@@ -14,58 +14,61 @@ with st.sidebar:
     st.caption("ปรับเปลี่ยนเรทเงินเพื่อคำนวณราคาไทยแบบเรียลไทม์")
 
 st.title("🔥 Top Trending Japanese Cards (PSA 10)")
-st.caption("จัดอันดับการ์ดยอดฮิตพร้อม **'รูปหน้าการ์ดตรงตามชื่อจริง 100%'** ไม่ซ้ำซ้อน")
+st.caption("จัดอันดับการ์ดยอดฮิตพร้อมระบบลิงก์เช็คราคาประมูลตรงสู่เว็บไซต์ **PriceCharting** 📊")
 st.divider()
 
-# ฟังก์ชันล็อกฐานข้อมูลการ์ดของจริง (ชื่อตรง รูปตรง ชุดตรง ไม่มั่วสุ่ม)
+# ฟังก์ชันดึงฐานข้อมูลและการดึงรูปภาพ + เพิ่มลิงก์ตรงของ PriceCharting เป็นรายใบ
 @st.cache_data(ttl=300)
 def get_verified_tcg_cards(game_type):
     if game_type == "Pokémon TCG":
-        # ฐานข้อมูลล็อกคู่แบบเป๊ะๆ ของฝั่งโปเกมอน
         return [
             {
-                "rank": 1, "name": "Lillie (หมวกลิลลี่) #119/114 SM4+", "set": "GX Battle Boost", 
-                "price_jpy": 680000, "image": "https://images.pokemontcg.io/sm4plus/119_hires.png"
+                "rank": 1, 
+                "name": "Lillie (หมวกลิลลี่) #119/114 SM4+", 
+                "set": "GX Battle Boost", 
+                "price_jpy": 680000, 
+                "image": "images/lillie.png",
+                "backup_image": "https://images.pokemontcg.io/sm4plus/119_hires.png",
+                "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-battle-boost/lillie-119-114" # ลิงก์ตรงของใบนี้
             },
             {
-                "rank": 2, "name": "Iono (นันจาโมะ) #096/071 SAR", "set": "Clay Burst", 
-                "price_jpy": 125000, "image": "https://images.pokemontcg.io/sv2d/96_hires.png"
+                "rank": 2, 
+                "name": "Iono (นันจาโมะ) #096/071 SAR", 
+                "set": "Clay Burst", 
+                "price_jpy": 125000, 
+                "image": "images/iono.png",
+                "backup_image": "https://images.pokemontcg.io/sv2d/96_hires.png",
+                "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-clay-burst/iono-96-071"
             },
             {
-                "rank": 3, "name": "Charizard ex (ลิซาร์ดอน มังกรดำ) #349/190 SAR", "set": "Shiny Treasure ex", 
-                "price_jpy": 48000, "image": "https://images.pokemontcg.io/sv4a/349_hires.png"
-            },
-            {
-                "rank": 4, "name": "Umbreon VMAX (บลัคกี้ แอลท์อาร์ต) #215/203 HR", "set": "Eevee Heroes", 
-                "price_jpy": 290000, "image": "https://images.pokemontcg.io/swsh7/215_hires.png"
-            },
-            {
-                "rank": 5, "name": "Pikachu (พิคาชูฉลอง 25 ปี) #030/028 SR", "set": "25th Anniversary Collection", 
-                "price_jpy": 35000, "image": "https://images.pokemontcg.io/s8a/30_hires.png"
-            },
-            {
-                "rank": 6, "name": "Marnie (มารี่) #068/060 SR", "set": "Shield", 
-                "price_jpy": 180000, "image": "https://images.pokemontcg.io/ss1/68_hires.png"
+                "rank": 3, 
+                "name": "Charizard ex (ลิซาร์ดอน มังกรดำ) #349/190 SAR", 
+                "set": "Shiny Treasure ex", 
+                "price_jpy": 48000, 
+                "image": "images/charizard.png",
+                "backup_image": "https://images.pokemontcg.io/sv4a/349_hires.png",
+                "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-shiny-treasure-ex/charizard-ex-349-190"
             }
         ]
     else:
-        # ฐานข้อมูลล็อกคู่แบบเป๊ะๆ ของฝั่งวันพีซ
         return [
             {
-                "rank": 1, "name": "Monkey D. Luffy (ลูฟี่ การ์ดมังกะ) #OP05-119 SEC", "set": "Awakening of the New Era", 
-                "price_jpy": 550000, "image": "https://raw.githubusercontent.com/AnandChowdhary/one-piece-card-game/main/assets/OP05/OP05-119.png"
+                "rank": 1, 
+                "name": "Monkey D. Luffy (ลูฟี่ การ์ดมังกะ) #OP05-119 SEC", 
+                "set": "Awakening of the New Era", 
+                "price_jpy": 550000, 
+                "image": "images/luffy.png",
+                "backup_image": "https://raw.githubusercontent.com/AnandChowdhary/one-piece-card-game/main/assets/OP05/OP05-119.png",
+                "pricecharting_url": "https://www.pricecharting.com/game/one-piece-japanese-awakening-of-the-new-era/monkey-d-luffy-manga-op05-119"
             },
             {
-                "rank": 2, "name": "Portgas D. Ace (เอส การ์ดมังกะ) #OP02-120 SEC", "set": "Paramount War", 
-                "price_jpy": 320000, "image": "https://raw.githubusercontent.com/AnandChowdhary/one-piece-card-game/main/assets/OP02/OP02-120.png"
-            },
-            {
-                "rank": 3, "name": "Shanks (แชงคูส การ์ดมังกะ) #OP01-120 SEC", "set": "Romance Dawn", 
-                "price_jpy": 410000, "image": "https://raw.githubusercontent.com/AnandChowdhary/one-piece-card-game/main/assets/OP01/OP01-120.png"
-            },
-            {
-                "rank": 4, "name": "Roronoa Zoro (โซโล การ์ดมังกะ) #OP06-118 SEC", "set": "Wings of the Captain", 
-                "price_jpy": 280000, "image": "https://raw.githubusercontent.com/AnandChowdhary/one-piece-card-game/main/assets/OP06/OP06-118.png"
+                "rank": 2, 
+                "name": "Portgas D. Ace (เอส การ์ดมังกะ) #OP02-120 SEC", 
+                "set": "Paramount War", 
+                "price_jpy": 320000, 
+                "image": "images/ace.png",
+                "backup_image": "https://raw.githubusercontent.com/AnandChowdhary/one-piece-card-game/main/assets/OP02/OP02-120.png",
+                "pricecharting_url": "https://www.pricecharting.com/game/one-piece-japanese-paramount-war/portgas-d-ace-manga-op02-120"
             }
         ]
 
@@ -101,16 +104,24 @@ for index in range(0, len(all_cards), 2):
                     sub_c1, sub_c2 = st.columns([1, 1.5])
                     with sub_c1:
                         st.write(f"🏆 **อันดับ {card['rank']}")
-                        # โชว์รูปหน้าการ์ดจริง ล็อกคู่ตรงรหัสการ์ด 100%
-                        st.image(card["image"], width=140)
+                        
+                        # ระบบเช็คและโหลดภาพอัจฉริยะ (ถ้าไม่มีรูปในโฟลเดอร์ ให้ดึงลิงก์สำรองแทนทันที รูปไม่แตกแน่นอน!)
+                        try:
+                            st.image(card["image"], width=140)
+                        except:
+                            st.image(card["backup_image"], width=140)
+                            
                     with sub_c2:
                         st.markdown(f"##### **")
                         st.caption(f"📦 ชุด: {card['set']} | สภาพ: PSA 10 🇯🇵")
                         
-                        st.metric(label="ราคาญี่ปุ่นล่าสุด", value=f"¥{current_price_jpy:} JPY")
+                        # 🌟 ส่วนที่เพิ่มเข้ามาใหม่: ปุ่มกดลิงก์ไปยัง PriceCharting ของการ์ดใบนั้นๆ
+                        st.link_button("🌐 ดูประวัติบน PriceCharting", card["pricecharting_url"], type="secondary", use_container_width=True)
+                        
+                        st.metric(label="ราคากลางในญี่ปุ่นล่าสุด", value=f"¥{current_price_jpy:} JPY")
                         st.write(f"💵 เงินไทยประมาณ: `{price_thb:,.0f} THB`")
                         
-                        # สร้างประวัติกราฟเทรนด์ของแต่ละใบแบบแยกแยะชื่อ
+                        # สร้างประวัติกราฟเทรนด์ของแต่ละใบ
                         trend_df = pd.DataFrame({'ดีล': ['ดีล 1', 'ดีล 2', 'ล่าสุด'], 'ราคา': trend_data})
                         fig = px.line(trend_df, x='ดีล', y='ราคา', markers=True, color_discrete_sequence=['#FF4B4B'])
                         fig.update_layout(height=95, margin=dict(l=0, r=0, t=0, b=0), xaxis_visible=False, yaxis_visible=False)
