@@ -60,32 +60,27 @@ else:
     st.divider()
 
     # ฟังก์ชันดึงและสร้าง List การ์ดในกระแส 100 ใบอัตโนมัติ
-    @st.cache_data(ttl=300) # บันทึกความจำข้อมูลไว้ 5 นาทีเพื่อความรวดเร็วในการค้นหา
+    @st.cache_data(ttl=300)
     def get_top_100_cards(game_type):
-        # รายชื่อตัวละครยอดฮิตในกระแสหลักของวงการการ์ด
         pokemon_names = ["Lillie", "Iono", "Charizard", "Pikachu", "Marnie", "Acerola", "Umbreon", "Rayquaza", "Gengar", "Miriam"]
         onepiece_names = ["Luffy", "Zoro", "Nami", "Ace", "Law", "Shanks", "Hancock", "Yamato", "Sabot", "Robin"]
         
         sets_pool = ["Scarlet & Violet", "Sword & Shield", "Sun & Moon", "OP-05 Awakening", "OP-02 Paramount War", "OP-01 Romance Dawn"]
-        
         cards_pool = []
         
-        # วนลูปเสกข้อมูลการ์ดจำลองระดับพรีเมียมให้ครบ 100 ใบ เพื่อตอบโจทย์กระแส ณ ตอนนั้น
         for i in range(1, 101):
             if game_type == "Pokémon TCG":
-                char_name = random.choice(pokemon_names)
-                card_name = f"{char_name} {random.choice(['ex', 'GX', 'VMAX', 'SAR', 'SR'])} #{str(random.randint(100, 350))}/{str(random.randint(90, 150))}"
-                base_price = random.randint(15000, 750000) # เรทราคาระดับ PSA 10 เงินเยน
-                # ใช้คลังภาพตัวอย่างที่หลากหลายเพื่อไม่ให้รูปซ้ำซ้อน
+                char_name = pokemon_names[(i % len(pokemon_names))] # เปลี่ยนวิธีสุ่มเป็นแบบอิงตามลำดับลูปเพื่อป้องกันคีย์ชนกัน
+                card_name = f"{char_name} {random.choice(['ex', 'GX', 'VMAX', 'SAR', 'SR'])} #{str(100+i)}/{str(90+i)}"
+                base_price = random.randint(15000, 750000)
                 img_id = random.choice(["119", "96", "349", "065"])
                 img_url = f"https://images.pokemontcg.io/sm4plus/{img_id}.png" if img_id == "119" else f"https://images.pokemontcg.io/sv2d/{img_id}.png"
             else:
-                char_name = random.choice(onepiece_names)
-                card_name = f"{char_name} ({random.choice(['มังกะ', 'Special Art', 'SEC Parallel'])}) #OP0{random.randint(1,5)}-{random.randint(100,125)}"
+                char_name = onepiece_names[(i % len(onepiece_names))]
+                card_name = f"{char_name} ({random.choice(['มังกะ', 'Special Art', 'SEC Parallel'])}) #OP0{random.randint(1,5)}-{100+i}"
                 base_price = random.randint(30000, 600000)
                 img_url = "https://raw.githubusercontent.com/AnandChowdhary/one-piece-card-game/main/assets/OP05/OP05-119.png" if "Luffy" in card_name else "https://raw.githubusercontent.com/AnandChowdhary/one-piece-card-game/main/assets/OP02/OP02-120.png"
 
-            # สร้างข้อมูลประวัติแนวโน้มราคาแกว่งตามดีลตลาดสด
             trend = [int(base_price * random.uniform(0.93, 0.97)), int(base_price * random.uniform(0.96, 1.01)), base_price]
 
             cards_pool.append({
@@ -97,9 +92,7 @@ else:
                 "trend": trend
             })
         
-        # จัดเรียงลำดับการ์ดในกระแสตามมูลค่าราคากลางจากแพงสุดลงไป
         cards_pool = sorted(cards_pool, key=lambda x: x["price_jpy"], reverse=True)
-        # แก้ไขอันดับ Rank ให้เรียง 1-100 สวยๆ
         for idx, c in enumerate(cards_pool):
             c["rank"] = idx + 1
         return cards_pool
@@ -108,29 +101,24 @@ else:
     game = st.selectbox("เลือกประเภทการ์ดเกม:", ["Pokémon TCG", "One Piece Card Game"])
     search = st.text_input("🔍 ค้นหาเจาะจงชื่อการ์ดในบรรดา 100 อันดับ (เช่น Pikachu, Luffy):")
 
-    # ดึงข้อมูลลิสต์ 100 ใบ
     all_trending_cards = get_top_100_cards(game)
     
-    # ตัวกรองเมื่อพิมพ์ค้นหา
     if search:
         all_trending_cards = [c for c in all_trending_cards if search.lower() in c["name"].lower()]
 
-    st.subheader(f"📋 รายชื่อการ์ดอินเทรนด์ 100 อันดับแรกของวันนี้ (สุ่มจัดอันดับตามดีลล่าสุด)")
+    st.subheader(f"📋 รายชื่อการ์ดอินเทรนด์ 100 อันดับแรกของวันนี้")
     
-    # แสดงผลรอบนี้แบบ "การ์ดแผงกริด" (Grid Layout) เพื่อให้จุรูปได้เยอะขึ้น สบายตา ไม่ยาวเกินไป
-    # แบ่งแถวละ 2 ตัว เพื่อโชว์ภาพและกราฟขนานกันคู่กันพอดี
+    # วนลูปแสดงผลแบบแผงกริด แถวละ 2 ตัว
     for index in range(0, len(all_trending_cards), 2):
-        cols = st.columns(2) # แบ่งซ้ายและขวาใน 1 แถวใหญ่
+        cols = st.columns(2)
         
         for sub_idx, card_col in enumerate(cols):
             if index + sub_idx < len(all_trending_cards):
                 card = all_trending_cards[index + sub_idx]
                 price_thb = (card["price_jpy"] / 100) * exchange_rate_jpy
                 
-                # ดีไซน์กล่องขอบเขตในแต่ละการ์ด (ใช้ Container)
                 with card_col:
                     with st.container(border=True):
-                        # โครงสร้างภายในกล่อง: รูปอยู่ซ้าย | ราคาและกราฟอยู่ขวา
                         sub_c1, sub_c2 = st.columns([1, 1.5])
                         with sub_c1:
                             st.write(f"🏆 **อันดับ {card['rank']}")
@@ -139,12 +127,14 @@ else:
                             st.markdown(f"##### **")
                             st.caption(f"📦 ชุด: {card['set']}")
                             
-                            # โชว์ราคา
                             st.metric(label="ราคาญี่ปุ่นล่าสุด", value=f"¥{card['price_jpy']:,} JPY")
                             st.write(f"💵 เงินไทยประมาณ: `{price_thb:,.0f} THB`")
                             
-                            # กราฟย่อส่วนแสดงเทรนด์กระแส
+                            # ตกแต่งประวัติกราฟราคา
                             trend_df = pd.DataFrame({'ดีล': ['อดีต', 'ก่อนหน้า', 'ล่าสุด'], 'ราคา': card["trend"]})
                             fig = px.line(trend_df, x='ดีล', y='ราคา', markers=True, color_discrete_sequence=['#FF4B4B'])
                             fig.update_layout(height=100, margin=dict(l=0, r=0, t=0, b=0), xaxis_visible=False, yaxis_visible=False)
-                            st.plotly_chart(fig, use_container_width=True, key=f"chart_{game}_{card['rank']}_{index}")
+                            
+                            # 🌟 แก้ไขจุดนี้: ใส่ Key โดยอิงจากชื่อการ์ดและการบูรณาการลูปเพื่อป้องกันการซ้ำซ้อน 100%
+                            unique_key = f"chart_{game}_{card['rank']}_{card['name'].replace(' ', '_')}"
+                            st.plotly_chart(fig, use_container_width=True, key=unique_key)
