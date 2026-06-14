@@ -6,7 +6,7 @@ from datetime import datetime
 # ตั้งค่าหน้าเว็บกว้าง
 st.set_page_config(page_title="Real-time Football Betting", page_icon="⚽", layout="wide")
 
-# --- 1. ระบบจำลองฐานข้อมูลสมาชิก + คะแนนแต้มเดิมพัน (จากระบบเดิม) ---
+# --- 1. ระบบจำลองฐานข้อมูลสมาชิก + คะแนนแต้มเดิมพัน ---
 if "user_db" not in st.session_state:
     st.session_state["user_db"] = {
         "admin": {"name": "ผู้ดูแลระบบ", "password": "1234", "points": 5000}
@@ -18,40 +18,43 @@ if "logged_in_user" not in st.session_state:
 if "betting_history" not in st.session_state:
     st.session_state["betting_history"] = []
 
-# --- 2. ฟังก์ชันหลัก: วิ่งไปดึงตารางแข่งจริงจาก Server ฟุตบอลภายนอก อัปเดตอัตโนมัติ ---
-@st.cache_data(ttl=300) # สั่งคลาวด์เซิร์ฟเวอร์ดึงซ้ำทุกๆ 5 นาทีเพื่อป้องกันไม่ให้เว็บโหลดช้า
+# --- 2. ฟังก์ชันดึงตารางแข่งจริง (พร้อมระบบสำรองที่ใช้งานได้จริง) ---
+@st.cache_data(ttl=60) # ลดเวลาจำเหลือ 1 นาที เพื่อให้อัปเดตไวขึ้น
 def fetch_real_matches():
     try:
-        # ใช้ API ตัวเปิดสาธารณะฟรีเพื่อดึงข้อมูลรายการแมตช์การแข่งขันฟุตบอล
         url = "https://api.football-data.org/v4/matches"
-        headers = { "X-Auth-Token": "da3b6a98818a4a58b29ff2d210a4dfb7" } # คีย์เชื่อมต่อมาตรฐานทดสอบระบบฟรี
-        response = requests.get(url, headers=headers)
-        data = response.json()
+        headers = { "X-Auth-Token": "da3b6a98818a4a58b29ff2d210a4dfb7" }
+        response = requests.get(url, headers=headers, timeout=5)
         
-        match_list = []
-        # แปลงข้อมูลดิบจาก API แกะเอาเฉพาะส่วนที่เราต้องใช้แสดงผล
-        if "matches" in data:
-            for m in data["matches"][:10]: # ดึงมาทดสอบ 10 คู่หลักของวันนี้ก่อนครับ
-                # ปรับแต่งการแสดงเวลา
-                raw_time = m["utcDate"]
-                clean_time = datetime.strptime(raw_time, "%Y-%m-%dT%H:%M:%SZ").strftime("%d/%m/%Y %H:%M น.")
-                
-                match_list.append({
-                    "id": m["id"],
-                    "league": m["competition"]["name"],
-                    "time": clean_time,
-                    "home": m["homeTeam"]["name"],
-                    "away": m["awayTeam"]["name"],
-                    "status": m["status"], # บอกว่า กำลังแข่ง (LIVE), จบแล้ว (FINISHED) หรือยังไม่แข่ง (TIMED)
-                    "score_home": m["score"]["fullTime"]["home"] if m["score"]["fullTime"]["home"] is not None else 0,
-                    "score_away": m["score"]["fullTime"]["away"] if m["score"]["fullTime"]["away"] is not None else 0
-                })
-        return match_list
+        # ถ้าดึงผ่านและได้ข้อมูลปกติ
+        if response.status_code == 200:
+            data = response.json()
+            match_list = []
+            if "matches" in data and len(data["matches"]) > 0:
+                for m in data["matches"][:10]:
+                    raw_time = m["utcDate"]
+                    clean_time = datetime.strptime(raw_time, "%Y-%m-%dT%H:%M:%SZ").strftime("%d/%m/%Y %H:%M น.")
+                    match_list.append({
+                        "id": m["id"],
+                        "league": m["competition"]["name"],
+                        "time": clean_time,
+                        "home": m["homeTeam"]["name"],
+                        "away": m["awayTeam"]["name"],
+                        "status": m["status"],
+                        "score_home": m["score"]["fullTime"]["home"] if m["score"]["fullTime"]["home"] is not None else 0,
+                        "score_away": m["score"]["fullTime"]["away"] if m["score"]["fullTime"]["away"] is not None else 0
+                    })
+                return match_list
+        
+        # ถ้า Status Code ไม่ใช่ 200 (เช่น โดนบล็อกหรือโควต้าเต็ม) ให้ส่ง Error ไปที่ระบบสำรอง
+        raise Exception("API Limit reached")
+        
     except Exception as e:
-        # หากเซิร์ฟเวอร์ขัดข้อง ให้สลับมาใช้ฐานข้อมูลสำรองอัตโนมัติเพื่อไม่ให้หน้าเว็บค้างหน้าจอแดง
+        # 🌟 ระบบสำรอง: ถ้า API ล่ม หรือโควต้าเต็ม จะส่งคู่นี้ไปให้เล่นทันที (สถานะ UPCOMING เพื่อให้กดแทงได้)
         return [
-            {"id": 101, "league": "Premier League", "time": "คืนนี้ 22:00 น.", "home": "Arsenal", "away": "Chelsea", "status": "TIMED", "score_home": 0, "score_away": 0},
-            {"id": 102, "league": "La Liga", "time": "คืนนี้ 02:00 น.", "home": "Real Madrid", "away": "Barcelona", "status": "TIMED", "score_home": 0, "score_away": 0}
+            {"id": 901, "league": "Premier League (Backup)", "time": "คืนนี้ 22:00 น.", "home": "Arsenal", "away": "Chelsea", "status": "UPCOMING", "score_home": 0, "score_away": 0},
+            {"id": 902, "league": "La Liga (Backup)", "time": "คืนนี้ 02:00 น.", "home": "Real Madrid", "away": "Barcelona", "status": "UPCOMING", "score_home": 0, "score_away": 0},
+            {"id": 903, "league": "UCL (Backup)", "time": "พรุ่งนี้ 02:00 น.", "home": "Liverpool", "away": "Bayern Munich", "status": "UPCOMING", "score_home": 0, "score_away": 0}
         ]
 
 # --- 3. ส่วนแสดงผลระบบล็อกอิน ---
@@ -85,7 +88,7 @@ if st.session_state["logged_in_user"] is None:
             else:
                 st.error("❌ ไอดีหรือรหัสผ่านไม่ถูกต้อง")
 
-# --- 4. หน้าเล่นเกมแทงบอลจริง (หลังล็อกอินสำเร็จ) ---
+# --- 4. หน้าเล่นเกมแทงบอลจริง ---
 else:
     current_user = st.session_state["logged_in_user"]
     user_info = st.session_state["user_db"][current_user]
@@ -99,21 +102,22 @@ else:
             st.rerun()
 
     st.title("⚽ LIVE Football Booking & Betting")
-    st.caption("ตารางการแข่งขันดึงข้อมูล Real-time อ้างอิงจากฐานข้อมูลฟุตบอลโลกแมตช์จริงนาทิต่อนาที")
+    st.caption("ตารางการแข่งขันดึงข้อมูลอ้างอิงแมตช์จริงนาทิต่อนาที (มีระบบสำรองเมื่อ API เต็ม)")
     st.divider()
 
-    # สั่งให้ดึงตารางแข่งของจริงมาทำงาน
+    # เรียกใช้งานฟังก์ชันดึงตารางแข่ง
     real_matches = fetch_real_matches()
 
-    st.subheader("📅 รายการแข่งขันจริงวันนี้ (เปิดรับทายผล)")
+    st.subheader("📅 รายการแข่งขันวันนี้ (เปิดรับทายผล)")
     
+    # วนลูปสร้างกล่องคู่แข่งขัน
     for match in real_matches:
-        # ตรวจสอบสถานะการแข่งขันจริง (ถ้าแข่งจบแล้ว หรือ กำลังแข่งสด จะล็อกปุ่มไม่ให้แทงเพื่อป้องกันคนโกง)
+        # เช็คสถานะล็อกปุ่ม (ถ้าขึ้น FINISHED, IN_PLAY, LIVE จะล็อกทันที)
         is_locked = match["status"] in ["FINISHED", "IN_PLAY", "LIVE"]
-        status_text = "🔴 กำลังแข่งสด / จบการแข่งขันแล้ว (ปิดรับแทง)" if is_locked else "🟢 เปิดรับการทายผล"
+        status_text = "🔴 แข่งขันแล้ว/กำลังเตะ (ปิดรับแทง)" if is_locked else "🟢 เปิดรับการทายผล"
         
         with st.expander(f"🏆 [{match['league']}] {match['home']} vs {match['away']} | เวลา: {match['time']} ({status_text})"):
-            st.write(f"📊 **สกอร์ปัจจุบันในสนามจริง:** {match['home']} {match['score_home']} - {match['score_away']} {match['away']}")
+            st.write(f"📊 **สกอร์ในสนาม:** {match['home']} {match['score_home']} - {match['score_away']} {match['away']}")
             
             if is_locked:
                 st.warning("🔒 แมตช์นี้เริ่มแข่งขันไปแล้วหรือจบลงแล้ว ระบบทำการปิดล็อกผลทายอัตโนมัติตามสัญญาณสด")
@@ -123,12 +127,12 @@ else:
                     st.write(f"🏠 **เจ้าบ้าน:** {match['home']}")
                     bet_home = st.button(f"🎯 เลือกฝั่ง {match['home']}", key=f"h_{match['id']}")
                 with col2:
-                    bet_amount = st.number_input("ใส่จำนวนแต้มที่ต้องการเดิมพัน:", min_value=10, max_value=user_info['points'], value=100, step=50, key=f"a_{match['id']}")
+                    bet_amount = st.number_input("ใส่จำนวนแต้มที่ต้องการเดิมพัน:", min_value=10, max_value=int(user_info['points']), value=100, step=50, key=f"a_{match['id']}")
                 with col3:
                     st.write(f"✈️ **ทีมเยือน:** {match['away']}")
                     bet_away = st.button(f"🎯 เลือกฝั่ง {match['away']}", key=f"v_{match['id']}")
                 
-                # กลไกหักแต้มและบันทึกผล
+                # บันทึกแต้ม
                 if bet_home or bet_away:
                     selected_team = match['home'] if bet_home else match['away']
                     st.session_state["user_db"][current_user]["points"] -= bet_amount
@@ -146,7 +150,7 @@ else:
 
     st.divider()
 
-    # --- 5. บอร์ดรายงานประวัติการแทงบอลของทุกคนบนเว็บ ---
+    # --- 5. บอร์ดรายงานประวัติการแทงบอล ---
     st.subheader("📊 ประวัติการทายผลบอลสดของสมาชิก (Live Ledger)")
     if len(st.session_state["betting_history"]) == 0:
         st.info("ยังไม่มีข้อมูลการวางเดิมพันในแมตช์จริงของวันนี้")
