@@ -2,10 +2,10 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# ตั้งค่าหน้าเว็บให้เป็นแบบ Wide เพื่อความสวยงามในการโชว์รูป
+# ตั้งค่าหน้าเว็บ
 st.set_page_config(page_title="SNKRDUNK PSA 10 Price", page_icon="🇯🇵", layout="wide")
 
-# --- 1. ระบบฐานข้อมูลสมาชิกชั่วคราว (จากระบบเดิม) ---
+# --- 1. ระบบฐานข้อมูลสมาชิกชั่วคราว ---
 if "user_db" not in st.session_state:
     st.session_state["user_db"] = {"admin": {"name": "ผู้ดูแลระบบ", "password": "1234"}}
 
@@ -43,7 +43,7 @@ if st.session_state["logged_in_user"] is None:
             else:
                 st.error("❌ ชื่อไอดีหรือรหัสผ่านไม่ถูกต้อง")
 
-# --- 3. หน้าเนื้อหาเว็บหลัก: ดึงราคาและโชว์รูปสไตล์ SNKRDUNK JP ---
+# --- 3. หน้าเนื้อหาเว็บหลัก ---
 else:
     with st.sidebar:
         st.write(f"ผู้ใช้งาน: **{st.session_state['logged_in_user']}** 👤")
@@ -56,28 +56,28 @@ else:
     st.caption("ดึงข้อมูลและแสดงรูปภาพอ้างอิงตามมาตรฐานตลาดซื้อขายการ์ดอันดับ 1 ของญี่ปุ่น (SNKRDUNK)")
     st.divider()
 
-    # ข้อมูลการ์ดตัวท็อปพร้อมลิงก์รูปภาพจริง (ดึงจากคลังรูปภาพเปิดสาธารณะที่เสถียร)
+    # แก้ไขคลังลิงก์รูปภาพใหม่ (ใช้รูปจากแหล่งเปิดที่ไม่บล็อกเว็บเรา)
     def get_snkrdunk_data(game_type, search_query):
         pokemon_db = [
             {
                 "name": "Lillie (หมวกลิลลี่) #119/114 SM4+", 
                 "set": "GX Battle Boost", 
                 "price_jpy": 650000, 
-                "image": "https://images.pokemontcg.io/sm4plus/119_hires.png",
+                "image": "https://images.pokemontcg.io/sm4plus/119.png", # ลิงก์แบบบีบอัด ไม่โดนบล็อก
                 "trend": [600000, 620000, 640000, 650000]
             },
             {
                 "name": "Iono (นันจาโมะ) #096/071 SAR", 
                 "set": "Clay Burst", 
                 "price_jpy": 130000, 
-                "image": "https://images.pokemontcg.io/sv2d/96_hires.png",
+                "image": "https://images.pokemontcg.io/sv2d/96.png",
                 "trend": [150000, 140000, 135000, 130000]
             },
             {
                 "name": "Charizard ex (ลิซาร์ดอน) #349/190 SAR", 
                 "set": "Shiny Treasure ex", 
                 "price_jpy": 45000, 
-                "image": "https://images.pokemontcg.io/sv4a/349_hires.png",
+                "image": "https://images.pokemontcg.io/sv4a/349.png",
                 "trend": [42000, 43000, 44000, 45000]
             }
         ]
@@ -87,66 +87,4 @@ else:
                 "name": "Monkey D. Luffy (ลูฟี่การ์ดมังกะ) #OP05-119 SEC", 
                 "set": "Awakening of the New Era", 
                 "price_jpy": 580000, 
-                "image": "https://limitlesstcg.s3.amazonaws.com/one-piece/OP05/OP05-119-Alt.png",
-                "trend": [520000, 550000, 565000, 580000]
-            },
-            {
-                "name": "Portgas D. Ace (เอสการ์ดมังกะ) #OP02-120 SEC", 
-                "set": "Paramount War", 
-                "price_jpy": 340000, 
-                "image": "https://limitlesstcg.s3.amazonaws.com/one-piece/OP02/OP02-120-Alt.png",
-                "trend": [360000, 350000, 345000, 340000]
-            }
-        ]
-        
-        db = pokemon_db if game_type == "Pokémon TCG" else onepiece_db
-        if search_query:
-            return [card for card in db if search_query.lower() in card["name"].lower()]
-        return db
-
-    # ส่วนค้นหา
-    col_ctrl1, col_ctrl2 = st.columns([1, 2])
-    with col_ctrl1:
-        game = st.selectbox("เลือกประเภทการ์ดเกม:", ["Pokémon TCG", "One Piece Card Game"])
-    with col_ctrl2:
-        search = st.text_input("🔍 พิมพ์ชื่อการ์ดที่ต้องการค้นหา (เช่น Luffy, Lillie, Iono):")
-
-    st.subheader(f"📋 รายการการ์ดจาก SNKRDUNK JP ({game})")
-    cards = get_snkrdunk_data(game, search)
-
-    if not cards:
-        st.error("❌ ไม่พบข้อมูลการ์ดใบนี้ในระบบฐานข้อมูล")
-    else:
-        for card in cards:
-            # คำนวณราคากลางเงินเยน -> เงินบาท (คิดจากเรทที่ตั้งไว้ใน Sidebar)
-            price_thb = (card["price_jpy"] / 100) * exchange_rate_jpy
-            
-            # แบ่งคอลัมน์: ฝั่งซ้ายโชว์ภาพการ์ด | ฝั่งขวาโชว์ราคาและกราฟ
-            card_col1, card_col2 = st.columns([1, 2])
-            
-            with card_col1:
-                # แสดงรูปภาพการ์ด
-                st.image(card["image"], caption=card["name"], use_container_width=True)
-                
-            with card_col2:
-                st.markdown(f"### ✨ {card['name']}")
-                st.markdown(f"ชุดซีรีส์: | **สถานะ:** PSA 10 Gem Mint 🇯🇵")
-                
-                # แสดงราคากลาง SNKRDUNK
-                m1, m2 = st.columns(2)
-                with m1:
-                    st.metric(label="ราคาล่าสุดบน SNKRDUNK JP", value=f"¥{card['price_jpy']:,} JPY")
-                with m2:
-                    st.metric(label="คิดเป็นเงินไทยโดยประมาณ", value=f"{price_thb:,.2f} THB")
-                
-                # แสดงกราฟแนวโน้มราคาสนีกเกอร์ดังก์
-                st.write("📊 **ประวัติราคายอดปิดล่าสุดบนแอป (SNKRDUNK History):**")
-                trend_df = pd.DataFrame({
-                    'ดีลล่าสุด': ['ดีลที่ 4', 'ดีลที่ 3', 'ดีลก่อนหน้า', 'ล่าสุดวันนี้'],
-                    'ราคา (YEN)': card["trend"]
-                })
-                fig = px.line(trend_df, x='ดีลล่าสุด', y='ราคา (YEN)', markers=True, color_discrete_sequence=['#FF4B4B'])
-                fig.update_layout(height=200, margin=dict(l=0, r=0, t=10, b=10))
-                st.plotly_chart(fig, use_container_width=True)
-                
-            st.divider()
+                "image": "
