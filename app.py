@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 
 # ตั้งค่าหน้าเว็บ
-st.set_page_config(page_title="TCG Member Web", page_icon="🃏", layout=wide)
+st.set_page_config(page_title="TCG Member Web", page_icon="🃏", layout="wide")
 
 # --- 1. ระบบฐานข้อมูลสมาชิกชั่วคราว (จำลองระบบสมัครไอดี) ---
 # ระบบจะเก็บไอดีที่สมัครไว้ใน Session State ตราบใดที่ยังไม่ปิดแท็บเว็บ
