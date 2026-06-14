@@ -1,147 +1,131 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 
-# ตั้งค่าหน้าเว็บ
-st.set_page_config(page_title="SNKRDUNK PSA 10 Price", page_icon="🇯🇵", layout="wide")
+# ตั้งค่าหน้าเว็บกว้างสวยงาม
+st.set_page_config(page_title="Football Betting System", page_icon="⚽", layout="wide")
 
-# --- 1. ระบบฐานข้อมูลสมาชิกชั่วคราว ---
+# --- 1. ระบบจำลองฐานข้อมูลสมาชิก + คะแนนแต้มเดิมพัน (Points) ---
 if "user_db" not in st.session_state:
-    st.session_state["user_db"] = {"admin": {"name": "ผู้ดูแลระบบ", "password": "1234"}}
+    # เริ่มต้นมีไอดี admin (รหัส 1234) ให้แต้มฟรี 1,000 แต้มไว้ลองแทงครับ
+    st.session_state["user_db"] = {
+        "admin": {"name": "ผู้ดูแลระบบ", "password": "1234", "points": 1000}
+    }
 
 if "logged_in_user" not in st.session_state:
     st.session_state["logged_in_user"] = None
 
+# ระบบจำลองประวัติการแทงบอล
+if "betting_history" not in st.session_state:
+    st.session_state["betting_history"] = []
+
 # --- 2. หน้าแรก: ระบบล็อกอิน / สมัครสมาชิก ---
 if st.session_state["logged_in_user"] is None:
-    st.title("🔐 กรุณาเข้าสู่ระบบเพื่อดูราคา SNKRDUNK JP")
+    st.title("🔐 เข้าสู่ระบบ / สมัครสมาชิกเพื่อเข้าแทงบอล")
     tab_login, tab_signup = st.tabs(["🔑 เข้าสู่ระบบ", "📝 สมัครสมาชิกใหม่"])
     
     with tab_signup:
-        st.subheader("สร้างไอดีของคุณ")
+        st.subheader("📝 สมัครไอดีใหม่ (รับฟรี 1,000 แต้ม)")
         new_username = st.text_input("ตั้งชื่อไอดี (Username):", key="reg_user")
-        new_name = st.text_input("ชื่อของคุณ (Display Name):", key="reg_name")
+        new_name = st.text_input("ชื่อเล่นของคุณ:", key="reg_name")
         new_password = st.text_input("ตั้งรหัสผ่าน (Password):", type="password", key="reg_pass")
         
-        if st.button("ยืนยันการสมัครสมาชิก", type="primary"):
+        if st.button("สมัครสมาชิกเลย 🚀", type="primary"):
             if not new_username or not new_password or not new_name:
-                st.error("❌ กรุณากรอกข้อมูลให้ครบช่องครับ")
+                st.error("❌ กรุณากรอกข้อมูลให้ครบถ้วน")
             elif new_username in st.session_state["user_db"]:
-                st.error("❌ ชื่อไอดีนี้มีผู้ใช้งานแล้ว")
+                st.error("❌ ไอดีนี้มีคนใช้แล้วครับ")
             else:
-                st.session_state["user_db"][new_username] = {"name": new_name, "password": new_password}
-                st.success("🎉 สมัครสมาชิกสำเร็จ! ไปที่แท็บเข้าสู่ระบบได้เลย")
+                # บันทึกไอดีใหม่ และแจกแต้มตั้งต้น 1000
+                st.session_state["user_db"][new_username] = {
+                    "name": new_name,
+                    "password": new_password,
+                    "points": 1000
+                }
+                st.success("🎉 สมัครสมาชิกสำเร็จ! สลับไปที่แท็บเข้าสู่ระบบได้เลย")
 
     with tab_login:
-        st.subheader("กรอกข้อมูลเพื่อเข้าสู่ระบบ")
-        username = st.text_input("ชื่อไอดี (Username):", key="login_user")
+        st.subheader("🔑 เข้าสู่ระบบ")
+        username = st.text_input("ไอดี (Username):", key="login_user")
         password = st.text_input("รหัสผ่าน (Password):", type="password", key="login_pass")
-        if st.button("เข้าสู่ระบบ"):
+        if st.button("เข้าสู่ระบบ 🔓"):
             if username in st.session_state["user_db"] and st.session_state["user_db"][username]["password"] == password:
-                st.session_state["logged_in_user"] = st.session_state["user_db"][username]["name"]
+                # จำว่าใครล็อกอินอยู่ (จำคีย์ username ไว้ดึงแต้ม)
+                st.session_state["logged_in_user"] = username
                 st.rerun()
             else:
-                st.error("❌ ชื่อไอดีหรือรหัสผ่านไม่ถูกต้อง")
+                st.error("❌ ไอดีหรือรหัสผ่านไม่ถูกต้อง")
 
-# --- 3. หน้าเนื้อหาเว็บหลัก ---
+# --- 3. หน้าเล่นเกมทายผลบอล (หลังล็อกอินสำเร็จ) ---
 else:
+    current_user = st.session_state["logged_in_user"]
+    user_info = st.session_state["user_db"][current_user]
+
+    # แถบเมนูด้านซ้าย (Sidebar) โชว์โปรไฟล์และคะแนน
     with st.sidebar:
-        st.write(f"ผู้ใช้งาน: **{st.session_state['logged_in_user']}** 👤")
-        exchange_rate_jpy = st.number_input("เรทเงินเยนปัจจุบัน (100 JPY = กี่บาท):", value=23.5)
-        if st.button("ออกจากระบบ (Log out)"):
+        st.markdown(f"### 👤 โปรไฟล์: {user_info['name']}")
+        st.markdown(f"### 💰 แต้มของคุณ: `{user_info['points']:,}` คะแนน")
+        st.divider()
+        if st.button("ออกจากระบบ 🚪"):
             st.session_state["logged_in_user"] = None
             st.rerun()
 
-    st.title("📈 SNKRDUNK JP - PSA 10 Price Tracker")
-    st.caption("ดึงข้อมูลและแสดงรูปภาพอ้างอิงตามมาตรฐานตลาดซื้อขายการ์ดอันดับ 1 ของญี่ปุ่น (SNKRDUNK)")
+    st.title("⚽ ระบบตารางแข่งและทายผลบอลออนไลน์")
+    st.caption("ระบบดึงตารางอัตโนมัติและบันทึกประวัติการวางเดิมพันตามรายชื่อไอดี")
     st.divider()
 
-    # ฐานข้อมูลตัวอย่าง - ตรวจสอบเครื่องหมายคำพูดเรียบร้อยทุกจุด
-    def get_snkrdunk_data(game_type, search_query):
-        pokemon_db = [
-            {
-                "name": "Lillie (หมวกลิลลี่) #119/114 SM4+", 
-                "set": "GX Battle Boost", 
-                "price_jpy": 650000, 
-                "image": "https://images.pokemontcg.io/sm4plus/119.png",
-                "trend": [600000, 620000, 640000, 650000]
-            },
-            {
-                "name": "Iono (นันจาโมะ) #096/071 SAR", 
-                "set": "Clay Burst", 
-                "price_jpy": 130000, 
-                "image": "https://images.pokemontcg.io/sv2d/96.png",
-                "trend": [150000, 140000, 135000, 130000]
-            },
-            {
-                "name": "Charizard ex (ลิซาร์ดอน) #349/190 SAR", 
-                "set": "Shiny Treasure ex", 
-                "price_jpy": 45000, 
-                "image": "https://images.pokemontcg.io/sv4a/349.png",
-                "trend": [42000, 43000, 44000, 45000]
-            }
-        ]
-        
-        onepiece_db = [
-            {
-                "name": "Monkey D. Luffy (ลูฟี่การ์ดมังกะ) #OP05-119 SEC", 
-                "set": "Awakening of the New Era", 
-                "price_jpy": 580000, 
-                "image": "https://raw.githubusercontent.com/AnandChowdhary/one-piece-card-game/main/assets/OP05/OP05-119.png",
-                "trend": [520000, 550000, 565000, 580000]
-            },
-            {
-                "name": "Portgas D. Ace (เอสการ์ดมังกะ) #OP02-120 SEC", 
-                "set": "Paramount War", 
-                "price_jpy": 340000, 
-                "image": "https://raw.githubusercontent.com/AnandChowdhary/one-piece-card-game/main/assets/OP02/OP02-120.png",
-                "trend": [360000, 350000, 345000, 340000]
-            }
-        ]
-        
-        db = pokemon_db if game_type == "Pokémon TCG" else onepiece_db
-        if search_query:
-            return [card for card in db if search_query.lower() in card["name"].lower()]
-        return db
+    # ข้อมูลตารางแข่งฟุตบอลวันนี้ (ในระบบจริงจะใช้คำสั่งดึงจาก API-Football อัตโนมัติ)
+    # ผมเตรียมข้อมูลแมตช์หยุดโลกไว้ให้ 3 คู่ครับ
+    matches = [
+        {"id": 1, "time": "21:00 น.", "league": "พรีเมียร์ลีก", "home": "แมนฯ ยูไนเต็ด", "away": "เชลซี", "odds": "แมนฯ ยูฯ ต่อ 0.5"},
+        {"id": 2, "time": "23:30 น.", "league": "พรีเมียร์ลีก", "home": "ลิเวอร์พูล", "away": "แมนฯ ซิตี้", "odds": "เสมอ ลิเวอร์พูล"},
+        {"id": 3, "time": "02:00 น.", "league": "ลาลีกา", "home": "เรอัล มาดริด", "away": "บาร์เซโลน่า", "odds": "มาดริด ต่อ 0.5/1"},
+    ]
 
-    # ส่วนค้นหา
-    col_ctrl1, col_ctrl2 = st.columns([1, 2])
-    with col_ctrl1:
-        game = st.selectbox("เลือกประเภทการ์ดเกม:", ["Pokémon TCG", "One Piece Card Game"])
-    with col_ctrl2:
-        search = st.text_input("🔍 พิมพ์ชื่อการ์ดที่ต้องการค้นหา (เช่น Luffy, Lillie):")
-
-    st.subheader(f"📋 รายการการ์ดจาก SNKRDUNK JP ({game})")
-    cards = get_snkrdunk_data(game, search)
-
-    if not cards:
-        st.error("❌ ไม่พบข้อมูลการ์ดใบนี้ในระบบฐานข้อมูล")
-    else:
-        for card in cards:
-            price_thb = (card["price_jpy"] / 100) * exchange_rate_jpy
-            card_col1, card_col2 = st.columns([1, 2])
+    # ส่วนแสดงตารางแข่งและปุ่มกดแทงบอล
+    st.subheader("📅 รายการแข่งขันและราคาต่อรองวันนี้")
+    
+    for match in matches:
+        with st.expander(f"⏰ {match['time']} | [{match['league']}] {match['home']} vs {match['away']} ({match['odds']})"):
+            col1, col2, col3 = st.columns(3)
             
-            with card_col1:
-                # แสดงรูปภาพการ์ด
-                st.image(card["image"], caption=card["name"], width=250)
+            with col1:
+                st.write(f"🏠 **ทีมเหย้า:** {match['home']}")
+                bet_home = st.button(f"🎯 แทง {match['home']}", key=f"home_{match['id']}")
+            
+            with col2:
+                st.write("⚖️ **ราคาต่อรองกลาง**")
+                st.info(match['odds'])
+                # ช่องให้กรอกจำนวนแต้มที่จะแทง
+                bet_amount = st.number_input("ใส่จำนวนแต้มที่ต้องการเดิมพัน:", min_value=10, max_value=user_info['points'], value=100, step=50, key=f"amt_{match['id']}")
                 
-            with card_col2:
-                st.markdown(f"### ✨ {card['name']}")
-                st.markdown(f"ชุดซีรีส์: | **สถานะ:** PSA 10 Gem Mint 🇯🇵")
+            with col3:
+                st.write(f"✈️ **ทีมเยือน:** {match['away']}")
+                bet_away = st.button(f"🎯 แทง {match['away']}", key=f"away_{match['id']}")
+            
+            # กลไกบันทึกเมื่อผู้ใช้กดปุ่มแทง
+            if bet_home or bet_away:
+                selected_team = match['home'] if bet_home else match['away']
                 
-                m1, m2 = st.columns(2)
-                with m1:
-                    st.metric(label="ราคาล่าสุดบน SNKRDUNK JP", value=f"¥{card['price_jpy']:,} JPY")
-                with m2:
-                    st.metric(label="คิดเป็นเงินไทยโดยประมาณ", value=f"{price_thb:,.2f} THB")
+                # หักคะแนนผู้ใช้จริงในฐานข้อมูล
+                st.session_state["user_db"][current_user]["points"] -= bet_amount
                 
-                st.write("📊 **ประวัติราคายอดปิดล่าสุดบนแอป (SNKRDUNK History):**")
-                trend_df = pd.DataFrame({
-                    'ดีลล่าสุด': ['ดีลที่ 4', 'ดีลที่ 3', 'ดีลก่อนหน้า', 'ล่าสุดวันนี้'],
-                    'ราคา (YEN)': card["trend"]
+                # บันทึกประวัติการแทง
+                st.session_state["betting_history"].append({
+                    "ผู้เล่น": user_info['name'],
+                    "คู่แข่งขัน": f"{match['home']} vs {match['away']}",
+                    "ทีมที่เลือก": selected_team,
+                    "จำนวนแต้มที่แทง": bet_amount
                 })
-                fig = px.line(trend_df, x='ดีลล่าสุด', y='ราคา (YEN)', markers=True, color_discrete_sequence=['#FF4B4B'])
-                fig.update_layout(height=200, margin=dict(l=0, r=0, t=10, b=10))
-                st.plotly_chart(fig, use_container_width=True)
-                
-            st.divider()
+                st.success(f"✔️ บันทึกการทายผลสำเร็จ! แทงทีม {selected_team} จำนวน {bet_amount} แต้มเรียบร้อย")
+                st.rerun() # รีเฟรชหน้าเว็บเพื่ออัปเดตแต้มล่าสุดในแถบซ้ายมือ
+
+    st.divider()
+
+    # --- 4. ตารางแสดงประวัติการทายผลบอลของคนในเว็บ ---
+    st.subheader("📊 ตารางบันทึกการทายผลบอลล่าสุด (Live Bet)")
+    if len(st.session_state["betting_history"]) == 0:
+        st.write("ยังไม่มีใครวางเดิมพันในวันนี้")
+    else:
+        # แปลงประวัติเป็นตาราง Dataframe มาโชว์แบบหน้าเว็บที่คุณส่งมาเลยครับ
+        history_df = pd.DataFrame(st.session_state["betting_history"])
+        st.dataframe(history_df, use_container_width=True)
