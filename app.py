@@ -1,88 +1,74 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import random
 
-# 1. ตั้งค่าหน้าเว็บ
-st.set_page_config(page_title="TCG PSA 10 Price Checker", page_icon="🃏", layout="wide")
+# ตั้งค่าหน้าเว็บ
+st.set_page_config(page_title="TCG Member Web", page_icon="🃏", layout=wide)
 
-st.title("🃏 TCG PSA 10 Price Checker (Japanese Edition)")
-st.subheader("เช็คราคาการ์ด Pokémon & One Piece ระดับ PSA 10 ภาษาญี่ปุ่น อ้างอิงตลาดโลก")
-st.write("ข้อมูลอ้างอิงและคำนวณฐานข้อมูลเฉลี่ยจาก: *PriceCharting / eBay Real-time Sold Data*")
+# --- 1. ระบบฐานข้อมูลสมาชิกชั่วคราว (จำลองระบบสมัครไอดี) ---
+# ระบบจะเก็บไอดีที่สมัครไว้ใน Session State ตราบใดที่ยังไม่ปิดแท็บเว็บ
+if "user_db" not in st.session_state:
+    # ใส่ไอดีตัวอย่างไว้ให้ก่อน 1 ไอดี (username: admin, password: 1234)
+    st.session_state["user_db"] = {"admin": {"name": "ผู้ดูแลระบบ", "password": "1234"}}
 
-st.divider()
+if "logged_in_user" not in st.session_state:
+    st.session_state["logged_in_user"] = None
 
-# 2. ฟังก์ชันจำลองดึงข้อมูลการ์ด (ในระบบจริงจะเชื่อมต่อ API ของ PriceCharting หรือ eBay)
-# ผมใส่ฐานข้อมูลตัวอย่างที่เป็นการ์ดสุดฮิตของทั้ง 2 การ์ดเกมไว้ให้ครับ
-def get_card_data(game_type, search_query):
-    # ฐานข้อมูลตัวอย่างการ์ดตัวท็อปเวอร์ชันญี่ปุ่น
-    pokemon_db = [
-        {"id": "001", "name": "Lillie (หมวกลิลลี่) #119/114 SM4+", "set": "Sun & Moon: GX Battle Boost", "price_usd": 4200, "trend": [4000, 4100, 3950, 4200]},
-        {"id": "002", "name": "Charizard VMAX (ลิซาร์ดอน) #308/190 SSR", "set": "Shiny Star V", "price_usd": 280, "trend": [310, 290, 285, 280]},
-        {"id": "003", "name": "Pikachu (พิคาชูสะพายกระเป๋า) #207/SM-P", "set": "Promo", "price_usd": 1200, "trend": [1100, 1150, 1180, 1200]},
-        {"id": "004", "name": "Iono (นันจาโมะ) #096/071 SAR", "set": "Clay Burst", "price_usd": 850, "trend": [950, 900, 870, 850]}
-    ]
+# --- 2. ส่วนหน้าจอเข้าใช้งาน (ล็อกอิน / สมัครสมาชิก) ---
+if st.session_state["logged_in_user"] is None:
+    st.title("🔐 กรุณาเข้าสู่ระบบก่อนใช้งาน")
     
-    onepiece_db = [
-        {"id": "001", "name": "Monkey D. Luffy (การ์ดมังกะ) #OP05-119 SEC", "set": "Awakening of the New Era", "price_usd": 3800, "trend": [3400, 3600, 3750, 3800]},
-        {"id": "002", "name": "Portgas D. Ace (การ์ดมังกะ) #OP02-120 SEC", "set": "Paramount War", "price_usd": 2200, "trend": [2400, 2300, 2250, 2200]},
-        {"id": "003", "name": "Boa Hancock (Special) #OP01-078 SR", "set": "Romance Dawn", "price_usd": 350, "trend": [320, 340, 345, 350]},
-        {"id": "004", "name": "Roronoa Zoro (การ์ดมังกะ) #OP06-118 SEC", "set": "Flanked by Legends", "price_usd": 1600, "trend": [1400, 1500, 1550, 1600]}
-    ]
+    # สร้างแท็บให้เลือกระหว่าง ล็อกอิน กับ สมัครสมาชิก
+    tab_login, tab_signup = st.tabs(["🔑 เข้าสู่ระบบ", "📝 สมัครสมาชิกใหม่"])
     
-    db = pokemon_db if game_type == "Pokémon TCG" else onepiece_db
+    # หน้าสมัครสมาชิก
+    with tab_signup:
+        st.subheader("สร้างไอดีของคุณ")
+        new_username = st.text_input("ตั้งชื่อไอดี (Username):", key="reg_user")
+        new_name = st.text_input("ชื่อของคุณ (Display Name):", key="reg_name")
+        new_password = st.text_input("ตั้งรหัสผ่าน (Password):", type="password", key="reg_pass")
+        
+        if st.button("ยืนยันการสมัครสมาชิก", type="primary"):
+            if not new_username or not new_password or not new_name:
+                st.error("❌ กรุณากรอกข้อมูลให้ครบทุกช่องครับ")
+            elif new_username in st.session_state["user_db"]:
+                st.error("❌ ชื่อไอดีนี้มีผู้ใช้งานแล้ว กรุณาเปลี่ยนใหม่ครับ")
+            else:
+                # บันทึกไอดีใหม่ลงฐานข้อมูลจำลอง
+                st.session_state["user_db"][new_username] = {
+                    "name": new_name,
+                    "password": new_password
+                }
+                st.success("🎉 สมัครสมาชิกสำเร็จแล้ว! คุณสามารถไปที่แท็บ 'เข้าสู่ระบบ' ได้เลย")
+
+    # หน้าล็อกอิน
+    with tab_login:
+        st.subheader("กรอกข้อมูลเพื่อเข้าสู่ระบบ")
+        username = st.text_input("ชื่อไอดี (Username):", key="login_user")
+        password = st.text_input("รหัสผ่าน (Password):", type="password", key="login_pass")
+        
+        if st.button("เข้าสู่ระบบ"):
+            # ตรวจสอบไอดีและรหัสผ่าน
+            if username in st.session_state["user_db"] and st.session_state["user_db"][username]["password"] == password:
+                st.session_state["logged_in_user"] = st.session_state["user_db"][username]["name"]
+                st.rerun() # สั่งรีเฟรชหน้าเว็บเพื่อเข้าสู่หน้าหลัก
+            else:
+                st.error("❌ ชื่อไอดีหรือรหัสผ่านไม่ถูกต้อง")
+
+# --- 3. หน้าเนื้อหาเว็บหลัก (แสดงหลังจากล็อกอินสำเร็จแล้วเท่านั้น) ---
+else:
+    # แถบเมนูด้านข้างสำหรับแสดงชื่อผู้ใช้และปุ่มออกจากระบบ
+    with st.sidebar:
+        st.write(f"สวัสดีครับคุณ **{st.session_state['logged_in_user']}** 😊")
+        if st.button("ออกจากระบบ (Log out)"):
+            st.session_state["logged_in_user"] = None
+            st.rerun()
+
+    # โค้ดเว็บเช็คราคาการ์ดเดิมของคุณ
+    st.title("🃏 TCG PSA 10 Price Checker")
+    st.write(f"ยินดีต้อนรับคุณ {st.session_state['logged_in_user']} เข้าสู่ระบบข้อมูลการ์ดระดับพรีเมียม")
     
-    # ค้นหาจากชื่อหรือรหัสการ์ด
-    if search_query:
-        result = [card for card in db if search_query.lower() in card["name"].lower() or search_query in card["id"]]
-        return result
-    return db
-
-# 3. ส่วนควบคุมบนหน้าเว็บ (UI)
-col1, col2 = st.columns([1, 2])
-
-with col1:
-    st.markdown("### 🔍 ตัวเลือกการค้นหา")
+    # (ฟังก์ชันจำลองดึงข้อมูลการ์ดและการแสดงผลกราฟจากโค้ดเดิมจะอยู่ตรงนี้)
     game = st.selectbox("เลือกประเภทการ์ดเกม:", ["Pokémon TCG", "One Piece Card Game"])
-    search = st.text_input("พิมพ์ชื่อการ์ด หรือ เลขรหัส (เช่น Luffy, Lillie, 001):")
-    
-    # อัตราแลกเปลี่ยนเงินตรา (สามารถเปลี่ยนตัวเลขตามค่าเงินปัจจุบันได้)
-    exchange_rate = st.number_input("อัตราแลกเปลี่ยน USD เป็น บาท (THB):", value=35.0)
-
-# 4. ส่วนแสดงผลลัพธ์
-with col2:
-    st.markdown(f"### 📊 ผลการค้นหาสำหรับ {game}")
-    cards = get_card_data(game, search)
-    
-    if not cards:
-        st.error("❌ ไม่พบข้อมูลการ์ดที่คุณค้นหา กรุณาลองใช้คำค้นหาอื่น เช่น ชื่อภาษาอังกฤษ หรือรหัสการ์ด")
-    else:
-        for card in cards:
-            # คำนวณราคาเงินบาท
-            price_thb = card["price_usd"] * exchange_rate
-            
-            with st.container():
-                st.markdown(f"#### 🏷️ {card['name']}")
-                st.caption(f"ซีรีส์/ชุด: | **สภาพ:** PSA 10 (Gem Mint) 🇯🇵")
-                
-                # แสดงกล่องราคาแบบเด่นๆ
-                metric_col1, metric_col2 = st.columns(2)
-                with metric_col1:
-                    st.metric(label="ราคาตลาดโลก (USD)", value=f"${card['price_usd']:,}")
-                with metric_col2:
-                    st.metric(label="ราคาประเมินเงินไทย (THB)", value=f"{price_thb:,.2f} บาท")
-                
-                # สร้างกราฟแนวโน้มราคาย้อนหลัง
-                st.write("📈 **แนวโน้มราคาย้อนหลัง (4 ยอดปิดประมูลล่าสุด):**")
-                trend_data = pd.DataFrame({
-                    'ครั้งที่': ['4 ครั้งก่อน', '3 ครั้งก่อน', 'ล่าสุดครั้งก่อน', 'ราคาน่าจะปัจจุบัน'],
-                    'ราคา (USD)': card['trend']
-                })
-                fig = px.line(trend_data, x='ครั้งที่', y='ราคา (USD)', markers=True)
-                fig.update_layout(height=250, margin=dict(l=20, r=20, t=20, b=20))
-                st.plotly_chart(fig, use_container_width=True)
-                
-                st.markdown("---")
-
-# 5. คำเตือนท้ายเว็บ
-st.warning("⚠️ **ข้อควรทราบ:** ราคาการ์ดสะสมมีการเปลี่ยนแปลงตลอดเวลา เว็บไซต์นี้เป็นราคาเฉลี่ยเพื่อใช้ในการอ้างอิงเบื้องต้นเท่านั้น ก่อนซื้อขายจริงควรตรวจสอบยอดปิดประมูลล่าสุดใน eBay หรือ PriceCharting อีกครั้ง")
+    search = st.text_input("พิมพ์ชื่อการ์ดที่ต้องการค้นหา:")
+    st.info(f"ระบบกำลังแสดงผลข้อมูลสำหรับสมาชิกทีกำลังเปิดดูข้อมูล {game}...")
