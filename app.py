@@ -24,33 +24,16 @@ st.divider()
 def get_verified_tcg_cards(game_type):
     if game_type == "Pokémon TCG":
         return [
-            {
-                "rank": 1, 
-                "name": "Lillie (หมวกลิลลี่) #119/114 SM4+", 
-                "set": "GX Battle Boost", 
-                "price_jpy": 680000, 
-                "image": "https://via.placeholder.com/220x308.png?text=Lillie",
-                "backup_image": "https://via.placeholder.com/220x308.png?text=Lillie",
-                "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-battle-boost/lillie-119-114" # ลิงก์ตรงของใบนี้
-            },
-            {
-                "rank": 2, 
-                "name": "Iono (นันจาโมะ) #096/071 SAR", 
-                "set": "Clay Burst", 
-                "price_jpy": 125000, 
-                "image": "https://via.placeholder.com/220x308.png?text=Iono",
-                "backup_image": "https://via.placeholder.com/220x308.png?text=Iono",
-                "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-clay-burst/iono-96-071"
-            },
-            {
-                "rank": 3, 
-                "name": "Charizard ex (ลิซาร์ดอน มังกรดำ) #349/190 SAR", 
-                "set": "Shiny Treasure ex", 
-                "price_jpy": 48000, 
-                "image": "https://via.placeholder.com/220x308.png?text=Charizard",
-                "backup_image": "https://via.placeholder.com/220x308.png?text=Charizard",
-                "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-shiny-treasure-ex/charizard-ex-349-190"
-            }
+            {"rank": 1, "name": "Lillie (หมวกลิลลี่) #119/114 SM4+", "set": "GX Battle Boost", "price_jpy": 680000, "image": "https://via.placeholder.com/220x308.png?text=Lillie", "backup_image": "https://via.placeholder.com/220x308.png?text=Lillie", "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-battle-boost/lillie-119-114"},
+            {"rank": 2, "name": "Iono (นันจาโมะ) #096/071 SAR", "set": "Clay Burst", "price_jpy": 125000, "image": "https://via.placeholder.com/220x308.png?text=Iono", "backup_image": "https://via.placeholder.com/220x308.png?text=Iono", "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-clay-burst/iono-96-071"},
+            {"rank": 3, "name": "Charizard ex (ลิซาร์ดอน มังกรดำ) #349/190 SAR", "set": "Shiny Treasure ex", "price_jpy": 48000, "image": "https://via.placeholder.com/220x308.png?text=Charizard", "backup_image": "https://via.placeholder.com/220x308.png?text=Charizard", "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-shiny-treasure-ex/charizard-ex-349-190"},
+            {"rank": 4, "name": "Pikachu (Promo) - Yellow Cheeks", "set": "Promo", "price_jpy": 120000, "image": "https://via.placeholder.com/220x308.png?text=Pikachu", "backup_image": "https://via.placeholder.com/220x308.png?text=Pikachu", "pricecharting_url": "https://www.pricecharting.com/game/pokemon-promo/pikachu"},
+            {"rank": 5, "name": "Charizard (1st Edition) #4/102", "set": "Base Set JP", "price_jpy": 3200000, "image": "https://via.placeholder.com/220x308.png?text=Charizard+1st", "backup_image": "https://via.placeholder.com/220x308.png?text=Charizard+1st", "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-base-set/charizard-4-102"},
+            {"rank": 6, "name": "Mewtwo EX (เทรนด์) #001", "set": "EX Series", "price_jpy": 150000, "image": "https://via.placeholder.com/220x308.png?text=Mewtwo", "backup_image": "https://via.placeholder.com/220x308.png?text=Mewtwo", "pricecharting_url": "https://www.pricecharting.com/game/pokemon-mewtwo"},
+            {"rank": 7, "name": "Shining Lugia #019", "set": "Shining Legends", "price_jpy": 250000, "image": "https://via.placeholder.com/220x308.png?text=Lugia", "backup_image": "https://via.placeholder.com/220x308.png?text=Lugia", "pricecharting_url": "https://www.pricecharting.com/game/pokemon-lugia"},
+            {"rank": 8, "name": "Rayquaza EX #123", "set": "Legend", "price_jpy": 200000, "image": "https://via.placeholder.com/220x308.png?text=Rayquaza", "backup_image": "https://via.placeholder.com/220x308.png?text=Rayquaza", "pricecharting_url": "https://www.pricecharting.com/game/pokemon-rayquaza"},
+            {"rank": 9, "name": "Gardevoir EX #045", "set": "Majestic", "price_jpy": 90000, "image": "https://via.placeholder.com/220x308.png?text=Gardevoir", "backup_image": "https://via.placeholder.com/220x308.png?text=Gardevoir", "pricecharting_url": "https://www.pricecharting.com/game/pokemon-gardevoir"},
+            {"rank": 10, "name": "Pikachu Illustrator (card art)", "set": "Special", "price_jpy": 5000000, "image": "https://via.placeholder.com/220x308.png?text=Pikachu+Illustrator", "backup_image": "https://via.placeholder.com/220x308.png?text=Pikachu+Illustrator", "pricecharting_url": "https://www.pricecharting.com/game/pokemon-pikachu-illustrator"}
         ]
     else:
         return [
