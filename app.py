@@ -27,7 +27,7 @@ def get_verified_tcg_cards(game_type):
                 "name": "Lillie (หมวกลิลลี่) #119/114 SM4+", 
                 "set": "GX Battle Boost", 
                 "price_jpy": 680000, 
-                "image": "images/lillie.png",
+                "image": "https://images.pokemontcg.io/sm4plus/119_hires.png",
                 "backup_image": "https://images.pokemontcg.io/sm4plus/119_hires.png",
                 "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-battle-boost/lillie-119-114" # ลิงก์ตรงของใบนี้
             },
@@ -36,7 +36,7 @@ def get_verified_tcg_cards(game_type):
                 "name": "Iono (นันจาโมะ) #096/071 SAR", 
                 "set": "Clay Burst", 
                 "price_jpy": 125000, 
-                "image": "images/iono.png",
+                "image": "https://images.pokemontcg.io/sv2d/96_hires.png",
                 "backup_image": "https://images.pokemontcg.io/sv2d/96_hires.png",
                 "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-clay-burst/iono-96-071"
             },
@@ -45,7 +45,7 @@ def get_verified_tcg_cards(game_type):
                 "name": "Charizard ex (ลิซาร์ดอน มังกรดำ) #349/190 SAR", 
                 "set": "Shiny Treasure ex", 
                 "price_jpy": 48000, 
-                "image": "images/charizard.png",
+                "image": "https://images.pokemontcg.io/sv4a/349_hires.png",
                 "backup_image": "https://images.pokemontcg.io/sv4a/349_hires.png",
                 "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-shiny-treasure-ex/charizard-ex-349-190"
             }
@@ -57,7 +57,7 @@ def get_verified_tcg_cards(game_type):
                 "name": "Monkey D. Luffy (ลูฟี่ การ์ดมังกะ) #OP05-119 SEC", 
                 "set": "Awakening of the New Era", 
                 "price_jpy": 550000, 
-                "image": "images/luffy.png",
+                "image": "https://raw.githubusercontent.com/AnandChowdhary/one-piece-card-game/main/assets/OP05/OP05-119.png",
                 "backup_image": "https://raw.githubusercontent.com/AnandChowdhary/one-piece-card-game/main/assets/OP05/OP05-119.png",
                 "pricecharting_url": "https://www.pricecharting.com/game/one-piece-japanese-awakening-of-the-new-era/monkey-d-luffy-manga-op05-119"
             },
@@ -66,7 +66,7 @@ def get_verified_tcg_cards(game_type):
                 "name": "Portgas D. Ace (เอส การ์ดมังกะ) #OP02-120 SEC", 
                 "set": "Paramount War", 
                 "price_jpy": 320000, 
-                "image": "images/ace.png",
+                "image": "https://raw.githubusercontent.com/AnandChowdhary/one-piece-card-game/main/assets/OP02/OP02-120.png",
                 "backup_image": "https://raw.githubusercontent.com/AnandChowdhary/one-piece-card-game/main/assets/OP02/OP02-120.png",
                 "pricecharting_url": "https://www.pricecharting.com/game/one-piece-japanese-paramount-war/portgas-d-ace-manga-op02-120"
             }
