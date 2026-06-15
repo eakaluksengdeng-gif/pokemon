@@ -5,6 +5,10 @@ import random
 from datetime import datetime
 import os
 import re
+import time
+import json
+import requests
+from bs4 import BeautifulSoup
 
 # ตั้งค่าหน้าเว็บกว้างโชว์การ์ดเป็นแผงสวยงาม
 st.set_page_config(page_title="Top JPN TCG Price Tracker", page_icon="🃏", layout="wide")
@@ -66,10 +70,150 @@ def _slugify(text: str) -> str:
 
 # ตัวเลือกหน้าเว็บหลัก
 game = st.selectbox("เลือกประเภทการ์ดเกม:", ["Pokémon TCG", "One Piece Card Game"])
+use_live = st.checkbox("🔁 ใช้ข้อมูลฮิตจาก PokéTCG (PoC, ฟรี)", value=False)
+if use_live:
+    st.caption("โหมด PoC: คำนวณความฮิตจากเมตาดาต้า PokéTCG (ไม่มีข้อมูลตลาดจริง)")
+use_scrape = st.checkbox("🔍 ใช้ Scraping (eBay sold listings) เพื่อวัดฮิตจริง (PoC)", value=False)
+if use_scrape:
+    st.caption("โหมด Scrape: จะส่งคำขอไปยัง eBay เพื่อคำนวนจำนวนรายการขาย (อาจถูกบล็อก/เปลี่ยนผลได้)")
 search = st.text_input("🔍 ค้นหาเจาะจงชื่อการ์ด (เช่น Pikachu, Luffy, Iono):")
 
 # เรียกข้อมูลการ์ดจริงที่จับคู่เรียบร้อยแล้ว
 all_cards = get_verified_tcg_cards(game)
+
+CACHE_FILE = "popular_cache.json"
+
+def _load_cache():
+    try:
+        with open(CACHE_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def _save_cache(data):
+    try:
+        with open(CACHE_FILE, "w") as f:
+            json.dump(data, f)
+    except Exception:
+        pass
+
+def get_live_popular_cards(limit=10, force_refresh=False):
+    # PoC: ใช้ PokéTCG API เพื่อดึงเมตาดาต้าการ์ดยอดนิยมตามชื่อคีย์เวิร์ด
+    cache = _load_cache()
+    now = int(time.time())
+    if not force_refresh and cache.get("ts") and now - cache["ts"] < 60 * 60 * 24:
+        return cache.get("data", [])
+
+    keywords = [
+        "Charizard", "Pikachu", "Mewtwo", "Lugia", "Rayquaza", "Gardevoir",
+        "Greninja", "Arceus", "Eevee", "Zacian", "Reshiram", "Zacian V",
+        "Pikachu VMAX", "Charizard VMAX", "Lucario", "Reshiram & Charizard"
+    ]
+
+    results = []
+    base = "https://api.pokemontcg.io/v2/cards"
+    headers = {"User-Agent": "TopJPN-TCG-App/1.0"}
+    for kw in keywords:
+        try:
+            resp = requests.get(base, params={"q": f"name:\"{kw}\"", "pageSize": 5}, headers=headers, timeout=8)
+            if resp.status_code != 200:
+                continue
+            data = resp.json().get("data", [])
+            if not data:
+                continue
+            card = data[0]
+            # heuristic score: rarity weight + recent set weight
+            rarity = card.get("rarity") or ""
+            rarity_score = 0
+            if "Ultra" in rarity or "EX" in rarity or "V" in card.get("name", ""):
+                rarity_score = 3
+            elif "Rare" in rarity:
+                rarity_score = 2
+            else:
+                rarity_score = 1
+
+            set_info = card.get("set", {})
+            release = set_info.get("releaseDate") or "1970-01-01"
+            try:
+                y = int(release.split("-")[0])
+                recency = max(0, 5 - (2026 - y))
+            except Exception:
+                recency = 0
+
+            score = rarity_score * 2 + recency
+            results.append({
+                "rank": 0,
+                "name": card.get("name"),
+                "set": set_info.get("name"),
+                "price_jpy": 0,
+                "image": card.get("images", {}).get("large"),
+                "backup_image": card.get("images", {}).get("small"),
+                "score": score,
+                "pricecharting_url": "https://www.pricecharting.com/"
+            })
+        except Exception:
+            continue
+
+    # sort and assign ranks
+    results = sorted(results, key=lambda r: r["score"], reverse=True)[:limit]
+    for i, r in enumerate(results, start=1):
+        r["rank"] = i
+
+    _save_cache({"ts": now, "data": results})
+    return results
+
+if use_live and game == "Pokémon TCG":
+    live = get_live_popular_cards(limit=10)
+    if live:
+        all_cards = live
+
+if use_scrape and game == "Pokémon TCG":
+    # Scrape eBay sold listings for each card name to estimate popularity (PoC)
+    def scrape_ebay_count(query):
+        try:
+            q = query.replace(' ', '+')
+            url = f"https://www.ebay.com/sch/i.html?_nkw={q}&_sop=10&LH_Sold=1&LH_Complete=1"
+            headers = {"User-Agent": "Mozilla/5.0 (compatible; TopJPNBot/1.0)"}
+            resp = requests.get(url, headers=headers, timeout=10)
+            if resp.status_code != 200:
+                return 0
+            soup = BeautifulSoup(resp.text, 'html.parser')
+            # attempt to find results count text
+            text = ''
+            h = soup.find('h1')
+            if h:
+                text = h.get_text(separator=' ')
+            if not text:
+                text = soup.get_text()[:2000]
+            m = re.search(r"([0-9,]+) results", text)
+            if not m:
+                m = re.search(r"([0-9,]+) sold", text)
+            if m:
+                return int(m.group(1).replace(',', ''))
+            # fallback: count listing items
+            items = soup.select('.srp-results .s-item')
+            return len(items) if items else 0
+        except Exception:
+            return 0
+
+    scraped = []
+    for card in all_cards:
+        name = card.get('name')
+        count = scrape_ebay_count(name)
+        scraped.append({
+            'rank': card.get('rank', 0),
+            'name': name,
+            'set': card.get('set'),
+            'price_jpy': card.get('price_jpy', 0),
+            'image': card.get('image'),
+            'backup_image': card.get('backup_image'),
+            'sales_count': count,
+            'pricecharting_url': card.get('pricecharting_url', '')
+        })
+    scraped = sorted(scraped, key=lambda x: x['sales_count'], reverse=True)
+    for i, s in enumerate(scraped, start=1):
+        s['rank'] = i
+    all_cards = scraped
 
 # ระบบค้นหาคำกรอง
 if search:
