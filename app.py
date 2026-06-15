@@ -121,6 +121,13 @@ for index in range(0, len(all_cards), 2):
                         st.metric(label="ราคากลางในญี่ปุ่นล่าสุด", value=f"¥{current_price_jpy:} JPY")
                         st.write(f"💵 เงินไทยประมาณ: `{price_thb:,.0f} THB`")
                         
+                        # แสดงรูปภาพขนาดใหญ่สำหรับการ์ด Pokémon เพื่อดูรายละเอียดชัดขึ้น
+                        if game == "Pokémon TCG":
+                            try:
+                                st.image(card["image"], width=220)
+                            except:
+                                st.image(card["backup_image"], width=220)
+
                         # สร้างประวัติกราฟเทรนด์ของแต่ละใบ
                         trend_df = pd.DataFrame({'ดีล': ['ดีล 1', 'ดีล 2', 'ล่าสุด'], 'ราคา': trend_data})
                         fig = px.line(trend_df, x='ดีล', y='ราคา', markers=True, color_discrete_sequence=['#FF4B4B'])
