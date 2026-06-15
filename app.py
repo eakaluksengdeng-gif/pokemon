@@ -68,6 +68,97 @@ def _slugify(text: str) -> str:
     text = re.sub(r"_+", "_", text).strip("_")
     return text
 
+def _cache_get(key, ttl=60 * 60 * 24):
+    cache = _load_cache()
+    item = cache.get(key)
+    if item and time.time() - item.get("ts", 0) < ttl:
+        return item.get("data")
+    return None
+
+
+def _cache_set(key, data):
+    cache = _load_cache()
+    cache[key] = {"ts": int(time.time()), "data": data}
+    _save_cache(cache)
+
+
+def parse_price_value(el):
+    if not el:
+        return None
+    text = el.get_text(separator=' ', strip=True)
+    if not text:
+        return None
+    text = text.replace('$', '').replace(',', '').replace('USD', '').strip()
+    if 'none available' in text.lower():
+        return None
+    try:
+        return float(text)
+    except Exception:
+        return None
+
+
+def build_pricecharting_query(search_text, game_type):
+    query = (search_text or '').strip()
+    if not query:
+        query = 'pokemon japanese' if game_type == 'Pokémon TCG' else 'one piece japanese'
+    else:
+        if game_type == 'Pokémon TCG' and 'pokemon' not in query.lower():
+            query = f"{query} pokemon japanese"
+        if game_type == 'One Piece Card Game' and 'one piece' not in query.lower():
+            query = f"{query} one piece japanese"
+    return query
+
+
+def search_pricecharting_products(search_text, game_type, limit=10):
+    query = build_pricecharting_query(search_text, game_type)
+    cached = _cache_get(f"pricecharting:{game_type}:{query}", ttl=60 * 30)
+    if cached is not None:
+        return cached
+
+    url = "https://www.pricecharting.com/search-products"
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; TopJPN-TCG-App/1.0)"}
+    params = {"q": query, "type": "prices"}
+    try:
+        resp = requests.get(url, headers=headers, params=params, timeout=12)
+        if resp.status_code != 200:
+            return []
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        rows = soup.select('tr[id^="product-"], tr[data-product]')
+        results = []
+        for row in rows:
+            if len(results) >= limit:
+                break
+            title_el = row.select_one('td.title a, td.image a, td.console a, h2.product_name a')
+            if not title_el:
+                continue
+            name = title_el.get_text(strip=True)
+            set_el = row.select_one('.console-in-title a, td.console a, .console-in-title')
+            set_name = set_el.get_text(strip=True) if set_el else ''
+            href = title_el.get('href', '')
+            if href.startswith('/'):
+                href = f"https://www.pricecharting.com{href}"
+            image_el = row.select_one('img.photo, td.image img, td.photo img')
+            image_url = image_el.get('src') if image_el else ''
+            price_used = parse_price_value(row.select_one('td.price.numeric.used_price span.js-price'))
+            price_cib = parse_price_value(row.select_one('td.price.numeric.cib_price span.js-price'))
+            price_new = parse_price_value(row.select_one('td.price.numeric.new_price span.js-price'))
+            results.append({
+                'rank': len(results) + 1,
+                'name': name,
+                'set': set_name,
+                'price_jpy': 0,
+                'image': image_url,
+                'backup_image': '',
+                'pricecharting_url': href,
+                'price_used': price_used,
+                'price_cib': price_cib,
+                'price_new': price_new,
+            })
+        _cache_set(f"pricecharting:{game_type}:{query}", results)
+        return results
+    except Exception:
+        return []
+
 # ตัวเลือกหน้าเว็บหลัก
 game = st.selectbox("เลือกประเภทการ์ดเกม:", ["Pokémon TCG", "One Piece Card Game"])
 use_live = st.checkbox("🔁 ใช้ข้อมูลฮิตจาก PokéTCG (PoC, ฟรี)", value=False)
@@ -76,6 +167,9 @@ if use_live:
 use_scrape = st.checkbox("🔍 ใช้ Scraping (eBay sold listings) เพื่อวัดฮิตจริง (PoC)", value=False)
 if use_scrape:
     st.caption("โหมด Scrape: จะส่งคำขอไปยัง eBay เพื่อคำนวนจำนวนรายการขาย (อาจถูกบล็อก/เปลี่ยนผลได้)")
+use_pricecharting = st.checkbox("🔎 ใช้ PriceCharting Search/Market Data", value=False)
+if use_pricecharting:
+    st.caption("โหมด PriceCharting: ดึงผลการค้นหาและราคาในตลาดจริงจาก PriceCharting.com")
 search = st.text_input("🔍 ค้นหาเจาะจงชื่อการ์ด (เช่น Pikachu, Luffy, Iono):")
 
 # เรียกข้อมูลการ์ดจริงที่จับคู่เรียบร้อยแล้ว
@@ -162,6 +256,13 @@ def get_live_popular_cards(limit=10, force_refresh=False):
     _save_cache({"ts": now, "data": results})
     return results
 
+if use_pricecharting:
+    pricecharting_cards = search_pricecharting_products(search, game, limit=10)
+    if pricecharting_cards:
+        all_cards = pricecharting_cards
+    else:
+        st.warning("ไม่พบผลการค้นหาจาก PriceCharting สำหรับคำค้นหานี้")
+
 if use_live and game == "Pokémon TCG":
     live = get_live_popular_cards(limit=10)
     if live:
@@ -216,7 +317,7 @@ if use_scrape and game == "Pokémon TCG":
     all_cards = scraped
 
 # ระบบค้นหาคำกรอง
-if search:
+if search and not use_pricecharting:
     all_cards = [c for c in all_cards if search.lower() in c["name"].lower()]
 
 st.subheader(f"📋 รายการการ์ดระดับท็อปฮิตอินเทรนด์ในตลาดขณะนี้")
@@ -228,12 +329,21 @@ for index in range(0, len(all_cards), 2):
     for sub_idx, card_col in enumerate(cols):
         if index + sub_idx < len(all_cards):
             card = all_cards[index + sub_idx]
-            price_thb = (card["price_jpy"] / 100) * exchange_rate_jpy
+            display_price = card.get("price_jpy") or card.get("price_used") or card.get("price_new") or 0
+            price_thb = (display_price / 100) * exchange_rate_jpy
             
             # จำลองราคาแกว่งล่าสุดเล็กน้อยเพื่อให้กราฟขยับดูสมจริง
             live_fluctuation = random.randint(-800, 800)
-            current_price_jpy = card["price_jpy"] + live_fluctuation
-            trend_data = [int(card["price_jpy"]*0.96), int(card["price_jpy"]*0.98), current_price_jpy]
+            current_price_jpy = int(display_price + live_fluctuation)
+            if use_pricecharting and card.get("price_used") is not None:
+                current_price_jpy = int(card["price_used"] * 140)
+            
+            if card.get("price_used") is not None or card.get("price_new") is not None or card.get("price_cib") is not None:
+                trend_values = [v for v in [card.get("price_used"), card.get("price_cib"), card.get("price_new")] if v is not None]
+                trend_labels = [label for label, v in [("Used", card.get("price_used")), ("CIB", card.get("price_cib")), ("New", card.get("price_new"))] if v is not None]
+            else:
+                trend_values = [int(display_price * 0.96), int(display_price * 0.98), int(display_price)]
+                trend_labels = ['ดีล 1', 'ดีล 2', 'ล่าสุด']
             
             with card_col:
                 with st.container(border=True):
@@ -252,11 +362,26 @@ for index in range(0, len(all_cards), 2):
                                 st.image(card["backup_image"], width=140)
                             
                     with sub_c2:
-                        st.markdown(f"##### **")
+                        st.markdown(f"##### **{card['name']}**")
                         st.caption(f"📦 ชุด: {card['set']} | สภาพ: PSA 10 🇯🇵")
                         
                         # 🌟 ส่วนที่เพิ่มเข้ามาใหม่: ปุ่มกดลิงก์ไปยัง PriceCharting ของการ์ดใบนั้นๆ
-                        st.link_button("🌐 ดูประวัติบน PriceCharting", card["pricecharting_url"], type="secondary", use_container_width=True)
+                        if card.get("pricecharting_url"):
+                            try:
+                                st.link_button("🌐 ดูประวัติบน PriceCharting", card["pricecharting_url"], type="secondary", use_container_width=True)
+                            except Exception:
+                                st.markdown(f"[🌐 ดูประวัติบน PriceCharting]({card['pricecharting_url']})")
+                        
+                        # แสดงราคา PriceCharting หากมีข้อมูล
+                        if card.get("price_used") is not None or card.get("price_new") is not None or card.get("price_cib") is not None:
+                            prices = []
+                            if card.get("price_used") is not None:
+                                prices.append(f"Used: ${card['price_used']:.2f}")
+                            if card.get("price_new") is not None:
+                                prices.append(f"New: ${card['price_new']:.2f}")
+                            if card.get("price_cib") is not None:
+                                prices.append(f"CIB: ${card['price_cib']:.2f}")
+                            st.write("💲 PriceCharting: " + ", ".join(prices))
                         
                         st.metric(label="ราคากลางในญี่ปุ่นล่าสุด", value=f"¥{current_price_jpy:} JPY")
                         st.write(f"💵 เงินไทยประมาณ: `{price_thb:,.0f} THB`")
@@ -275,9 +400,15 @@ for index in range(0, len(all_cards), 2):
                                     st.image(card["backup_image"], width=220)
 
                         # สร้างประวัติกราฟเทรนด์ของแต่ละใบ
-                        trend_df = pd.DataFrame({'ดีล': ['ดีล 1', 'ดีล 2', 'ล่าสุด'], 'ราคา': trend_data})
-                        fig = px.line(trend_df, x='ดีล', y='ราคา', markers=True, color_discrete_sequence=['#FF4B4B'])
-                        fig.update_layout(height=95, margin=dict(l=0, r=0, t=0, b=0), xaxis_visible=False, yaxis_visible=False)
+                        trend_df = pd.DataFrame({'ราคา': trend_values}, index=trend_labels)
+                        fig = px.line(trend_df, y='ราคา', markers=True, color_discrete_sequence=['#FF4B4B'])
+                        fig.update_layout(
+                            height=120,
+                            margin=dict(l=0, r=0, t=0, b=0),
+                            xaxis_title=None,
+                            yaxis_title=None,
+                            xaxis=dict(tickmode='array', tickvals=list(range(len(trend_labels)),), ticktext=trend_labels)
+                        )
                         
                         unique_key = f"chart_{game}_{card['rank']}_{card['name'].replace(' ', '_')}"
                         st.plotly_chart(fig, use_container_width=True, key=unique_key)
