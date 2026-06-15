@@ -3,6 +3,8 @@ import pandas as pd
 import plotly.express as px
 import random
 from datetime import datetime
+import os
+import re
 
 # ตั้งค่าหน้าเว็บกว้างโชว์การ์ดเป็นแผงสวยงาม
 st.set_page_config(page_title="Top JPN TCG Price Tracker", page_icon="🃏", layout="wide")
@@ -72,6 +74,13 @@ def get_verified_tcg_cards(game_type):
             }
         ]
 
+
+def _slugify(text: str) -> str:
+    text = text.lower()
+    text = re.sub(r"[^a-z0-9]+", "_", text)
+    text = re.sub(r"_+", "_", text).strip("_")
+    return text
+
 # ตัวเลือกหน้าเว็บหลัก
 game = st.selectbox("เลือกประเภทการ์ดเกม:", ["Pokémon TCG", "One Piece Card Game"])
 search = st.text_input("🔍 ค้นหาเจาะจงชื่อการ์ด (เช่น Pikachu, Luffy, Iono):")
@@ -104,12 +113,16 @@ for index in range(0, len(all_cards), 2):
                     sub_c1, sub_c2 = st.columns([1, 1.5])
                     with sub_c1:
                         st.write(f"🏆 **อันดับ {card['rank']}")
-                        
-                        # ระบบเช็คและโหลดภาพอัจฉริยะ (ถ้าไม่มีรูปในโฟลเดอร์ ให้ดึงลิงก์สำรองแทนทันที รูปไม่แตกแน่นอน!)
-                        try:
-                            st.image(card["image"], width=140)
-                        except:
-                            st.image(card["backup_image"], width=140)
+
+                        # โหลดรูปจากไฟล์ท้องถิ่น (images/) ก่อน หากไม่เจอค่อยใช้ URL สำรอง
+                        local_path = f"images/{_slugify(card['name'])}.png"
+                        if os.path.exists(local_path):
+                            st.image(local_path, width=140)
+                        else:
+                            try:
+                                st.image(card["image"], width=140)
+                            except:
+                                st.image(card["backup_image"], width=140)
                             
                     with sub_c2:
                         st.markdown(f"##### **")
@@ -121,12 +134,18 @@ for index in range(0, len(all_cards), 2):
                         st.metric(label="ราคากลางในญี่ปุ่นล่าสุด", value=f"¥{current_price_jpy:} JPY")
                         st.write(f"💵 เงินไทยประมาณ: `{price_thb:,.0f} THB`")
                         
-                        # แสดงรูปภาพขนาดใหญ่สำหรับการ์ด Pokémon เพื่อดูรายละเอียดชัดขึ้น
+                        # แสดงรูปภาพขนาดใหญ่สำหรับการ์ด Pokémon: ใช้ไฟล์ท้องถิ่นก่อน ถ้าไม่มีค่อยใช้ URL
                         if game == "Pokémon TCG":
-                            try:
-                                st.image(card["image"], width=220)
-                            except:
-                                st.image(card["backup_image"], width=220)
+                            large_local = f"images/{_slugify(card['name'])}_large.png"
+                            if os.path.exists(large_local):
+                                st.image(large_local, width=220)
+                            elif os.path.exists(local_path):
+                                st.image(local_path, width=220)
+                            else:
+                                try:
+                                    st.image(card["image"], width=220)
+                                except:
+                                    st.image(card["backup_image"], width=220)
 
                         # สร้างประวัติกราฟเทรนด์ของแต่ละใบ
                         trend_df = pd.DataFrame({'ดีล': ['ดีล 1', 'ดีล 2', 'ล่าสุด'], 'ราคา': trend_data})
