@@ -27,8 +27,8 @@ def get_verified_tcg_cards(game_type):
                 "name": "Lillie (หมวกลิลลี่) #119/114 SM4+", 
                 "set": "GX Battle Boost", 
                 "price_jpy": 680000, 
-                "image": "https://images.pokemontcg.io/sm4plus/119_hires.png",
-                "backup_image": "https://images.pokemontcg.io/sm4plus/119_hires.png",
+                "image": "https://via.placeholder.com/220x308.png?text=Lillie",
+                "backup_image": "https://via.placeholder.com/220x308.png?text=Lillie",
                 "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-battle-boost/lillie-119-114" # ลิงก์ตรงของใบนี้
             },
             {
@@ -36,8 +36,8 @@ def get_verified_tcg_cards(game_type):
                 "name": "Iono (นันจาโมะ) #096/071 SAR", 
                 "set": "Clay Burst", 
                 "price_jpy": 125000, 
-                "image": "https://images.pokemontcg.io/sv2d/96_hires.png",
-                "backup_image": "https://images.pokemontcg.io/sv2d/96_hires.png",
+                "image": "https://via.placeholder.com/220x308.png?text=Iono",
+                "backup_image": "https://via.placeholder.com/220x308.png?text=Iono",
                 "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-clay-burst/iono-96-071"
             },
             {
@@ -45,8 +45,8 @@ def get_verified_tcg_cards(game_type):
                 "name": "Charizard ex (ลิซาร์ดอน มังกรดำ) #349/190 SAR", 
                 "set": "Shiny Treasure ex", 
                 "price_jpy": 48000, 
-                "image": "https://images.pokemontcg.io/sv4a/349_hires.png",
-                "backup_image": "https://images.pokemontcg.io/sv4a/349_hires.png",
+                "image": "https://via.placeholder.com/220x308.png?text=Charizard",
+                "backup_image": "https://via.placeholder.com/220x308.png?text=Charizard",
                 "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-shiny-treasure-ex/charizard-ex-349-190"
             }
         ]
