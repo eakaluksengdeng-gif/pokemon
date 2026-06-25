@@ -73,8 +73,8 @@ def get_verified_tcg_cards(game_type):
                 "name": "Monkey D. Luffy (ลูฟี่ การ์ดมังกะ) #OP05-119 SEC", 
                 "set": "Awakening of the New Era", 
                 "price_jpy": 550000, 
-                "image": "https://raw.githubusercontent.com/AnandChowdhary/one-piece-card-game/main/assets/OP05/OP05-119.png",
-                "backup_image": "https://raw.githubusercontent.com/AnandChowdhary/one-piece-card-game/main/assets/OP05/OP05-119.png",
+                "image": "https://storage.googleapis.com/images.pricecharting.com/hcn3n7lf2oftjsnh/240.jpg",
+                "backup_image": "https://storage.googleapis.com/images.pricecharting.com/hcn3n7lf2oftjsnh/120.jpg",
                 "pricecharting_url": "https://www.pricecharting.com/game/one-piece-japanese-awakening-of-the-new-era/monkey-d-luffy-manga-op05-119"
             },
             {
@@ -82,8 +82,8 @@ def get_verified_tcg_cards(game_type):
                 "name": "Portgas D. Ace (เอส การ์ดมังกะ) #OP02-120 SEC", 
                 "set": "Paramount War", 
                 "price_jpy": 320000, 
-                "image": "https://raw.githubusercontent.com/AnandChowdhary/one-piece-card-game/main/assets/OP02/OP02-120.png",
-                "backup_image": "https://raw.githubusercontent.com/AnandChowdhary/one-piece-card-game/main/assets/OP02/OP02-120.png",
+                "image": "https://storage.googleapis.com/images.pricecharting.com/fypdjx6jicnhz5bl/240.jpg",
+                "backup_image": "https://storage.googleapis.com/images.pricecharting.com/fypdjx6jicnhz5bl/120.jpg",
                 "pricecharting_url": "https://www.pricecharting.com/game/one-piece-japanese-paramount-war/portgas-d-ace-manga-op02-120"
             }
         ]
