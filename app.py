@@ -10,6 +10,7 @@ import json
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import quote
+from streamlit_autorefresh import st_autorefresh
 
 # ตั้งค่าหน้าเว็บกว้างโชว์การ์ดเป็นแผงสวยงาม
 st.set_page_config(page_title="Top JPN TCG Price Tracker", page_icon="🃏", layout="wide")
@@ -47,7 +48,10 @@ with st.sidebar:
     exchange_rate_jpy = st.number_input("เรทเงินเยน (100 JPY = กี่บาท):", value=23.5)
     st.caption("ปรับเรทเงินเพื่อแสดงราคาไทยและแนวโน้มราคาวันนี้")
 
-st.title("🔥 ข่าวสารการ์ด Pokémon & One Piece ฮิตวันนี้")
+# ตั้งให้หน้ารีเฟรชตัวเองอัตโนมัติทุกๆ 5 นาที (300,000 มิลลิวินาที)
+st_autorefresh(interval=300000, key="tcg_auto_refresh")
+
+st.title("🔥 ข่าวสารการ์ด Pokémon & One Piece ฮิตวันนี้ (อัปเดตอัตโนมัติทุก 5 นาที)")
 st.caption("อัปเดตข่าวการ์ดร้อนแรง พร้อมโชว์เปอร์เซ็นต์การขึ้นราคาการ์ดเด็ดของวัน")
 st.divider()
 
@@ -329,7 +333,9 @@ def search_pricecharting_products(search_text, game_type, limit=10):
         for row in rows:
             if len(results) >= limit:
                 break
-            title_el = row.select_one('td.title a, td.image a, td.console a, h2.product_name a')
+            title_el = row.select_one('td.title a, h2.product_name a')
+            if not title_el:
+                title_el = row.select_one('td.image a, td.console a')
             if not title_el:
                 continue
             name = title_el.get_text(strip=True)
@@ -365,7 +371,7 @@ view_mode = st.selectbox("เลือกการแสดงผล:", ["ทั
 use_live = st.checkbox("🔁 ใช้ข้อมูลฮิตจาก PokéTCG (PoC, ฟรี)", value=False)
 if use_live:
     st.caption("โหมด PoC: คำนวณความฮิตจากเมตาดาต้า PokéTCG (ไม่มีข้อมูลตลาดจริง)")
-use_pricecharting = st.checkbox("🔎 ใช้ PriceCharting Search/Market Data", value=False)
+use_pricecharting = st.checkbox("🔎 ใช้ PriceCharting Search/Market Data", value=True)
 if use_pricecharting:
     st.caption("โหมด PriceCharting: ดึงผลการค้นหาและราคาในตลาดจริงจาก PriceCharting.com")
 search = st.text_input("🔍 ค้นหาเจาะจงชื่อการ์ด (เช่น Pikachu, Luffy, Iono):")
@@ -466,8 +472,8 @@ def get_live_popular_cards(limit=10, force_refresh=False):
     _save_cache({"ts": now, "data": results})
     return results
 
-def get_daily_trending_cards(game_type, limit=10, force_refresh=False, search_text="", use_pricecharting=False, use_live=False):
-    cache_key = f"daily_trending:{game_type}:{search_text or 'default'}"
+def get_daily_trending_cards(game_type, limit=50, force_refresh=False, search_text="", use_pricecharting=True, use_live=False):
+    cache_key = f"daily_trending:{game_type}:{search_text or 'default'}:limit50"
     if not force_refresh:
         cached = _daily_cache_get(cache_key)
         if cached is not None:
@@ -579,25 +585,25 @@ def render_card_grid(cards, game_type):
                             st.plotly_chart(fig, use_container_width=True, key=unique_key)
 
 # ระบบค้นหาคำกรอง
-pokemon_cards = get_daily_trending_cards("Pokémon TCG", limit=10, search_text=search if use_pricecharting else "", use_pricecharting=use_pricecharting, use_live=use_live)
-onepiece_cards = get_daily_trending_cards("One Piece Card Game", limit=10, search_text=search if use_pricecharting else "", use_pricecharting=use_pricecharting)
+pokemon_cards = get_daily_trending_cards("Pokémon TCG", limit=50, search_text=search if use_pricecharting else "", use_pricecharting=use_pricecharting, use_live=use_live)
+onepiece_cards = get_daily_trending_cards("One Piece Card Game", limit=50, search_text=search if use_pricecharting else "", use_pricecharting=use_pricecharting)
 
 if search and not use_pricecharting:
     pokemon_cards = [c for c in pokemon_cards if search.lower() in c["name"].lower()]
     onepiece_cards = [c for c in onepiece_cards if search.lower() in c["name"].lower()]
 
 st.subheader(f"📋 ข่าวสารการ์ดฮิตประจำวันที่ {datetime.now().strftime('%d/%m/%Y')}")
-st.caption("ติดตามการ์ดฮิต 10 ใบของ Pokémon และ One Piece ประจำสัปดาห์นี้ พร้อมรีเฟรชข้อมูลทุกวัน")
+st.caption("ติดตามการ์ดฮิต 50 ใบของ Pokémon และ One Piece ประจำสัปดาห์นี้ พร้อมรีเฟรชข้อมูลทุกวัน")
 
 if view_mode in ["ทั้งสองเกม", "Pokémon TCG"]:
-    st.markdown("### 🟦 Pokémon TCG 10 ใบฮิตประจำสัปดาห์")
+    st.markdown("### 🟦 Pokémon TCG 50 ใบฮิตประจำสัปดาห์")
     if not pokemon_cards:
         st.info("ไม่พบการ์ด Pokémon ที่ตรงกับเกณฑ์นี้")
     else:
         render_card_grid(pokemon_cards, "Pokémon TCG")
 
 if view_mode in ["ทั้งสองเกม", "One Piece Card Game"]:
-    st.markdown("### 🟦 One Piece Card Game 10 ใบฮิตประจำสัปดาห์")
+    st.markdown("### 🟦 One Piece Card Game 50 ใบฮิตประจำสัปดาห์")
     if not onepiece_cards:
         st.info("ไม่พบการ์ด One Piece ที่ตรงกับเกณฑ์นี้")
     else:
