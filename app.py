@@ -13,6 +13,32 @@ from bs4 import BeautifulSoup
 # ตั้งค่าหน้าเว็บกว้างโชว์การ์ดเป็นแผงสวยงาม
 st.set_page_config(page_title="Top JPN TCG Price Tracker", page_icon="🃏", layout="wide")
 
+# สไตล์หน้าเว็บให้เป็นโทนแดง
+st.markdown(
+    """
+    <style>
+    body, .stApp, .css-ffhzg2 {
+        background-color: #8B0000 !important;
+        color: #FFFFFF !important;
+    }
+    .stSidebar, .css-1d391kg {
+        background-color: #660000 !important;
+        color: #FFFFFF !important;
+    }
+    .stButton>button, .stTextInput>div>div>input, .stNumberInput>div>input, .stSelectbox>div, .stCheckbox>div {
+        color: #FFFFFF !important;
+    }
+    a {
+        color: #FFDADA !important;
+    }
+    .stMarkdown, .stText, .stCaption, .stHeader, .stMetric {
+        color: #FFFFFF !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 # แถบเมนูด้านซ้าย (Sidebar) สำหรับปรับเรทเงิน
 with st.sidebar:
     st.subheader("⚙️ ตั้งค่าระบบ")
