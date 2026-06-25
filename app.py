@@ -9,6 +9,7 @@ import time
 import json
 import requests
 from bs4 import BeautifulSoup
+from urllib.parse import quote
 
 # ตั้งค่าหน้าเว็บกว้างโชว์การ์ดเป็นแผงสวยงาม
 st.set_page_config(page_title="Top JPN TCG Price Tracker", page_icon="🃏", layout="wide")
@@ -50,43 +51,216 @@ st.title("🔥 ข่าวสารการ์ด Pokémon & One Piece ฮิ�
 st.caption("อัปเดตข่าวการ์ดร้อนแรง พร้อมโชว์เปอร์เซ็นต์การขึ้นราคาการ์ดเด็ดของวัน")
 st.divider()
 
-# ฟังก์ชันดึงฐานข้อมูลและการดึงรูปภาพ + เพิ่มลิงก์ตรงของ PriceCharting เป็นรายใบ
+# ฟังก์ชันดึงฐานข้อมูลและการดึงรูปภาพ + เพิ่มลิงก์ตรงของ PriceCharting & SNKRDUNK
 @st.cache_data(ttl=300)
 def get_verified_tcg_cards(game_type):
     if game_type == "Pokémon TCG":
         return [
-            {"rank": 1, "name": "Lillie #62", "set": "Shining Legends", "price_jpy": 680000, "image": "https://images.pokemontcg.io/sm35/62_hires.png", "backup_image": "https://images.pokemontcg.io/sm35/62.png", "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-shining-legends/lillie-62"},
-            {"rank": 2, "name": "Iono #185", "set": "Paldea Evolved", "price_jpy": 125000, "image": "https://images.pokemontcg.io/sv2/185_hires.png", "backup_image": "https://images.pokemontcg.io/sv2/185.png", "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-paldea-evolved/iono-185"},
-            {"rank": 3, "name": "Charizard ex #125", "set": "Obsidian Flames", "price_jpy": 48000, "image": "https://images.pokemontcg.io/sv3/125_hires.png", "backup_image": "https://images.pokemontcg.io/sv3/125.png", "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-obsidian-flames/charizard-ex-125"},
-            {"rank": 4, "name": "Pikachu #1", "set": "Base Promo", "price_jpy": 120000, "image": "https://images.pokemontcg.io/basep/1_hires.png", "backup_image": "https://images.pokemontcg.io/basep/1.png", "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-base-promo/pikachu-1"},
-            {"rank": 5, "name": "Charizard #4", "set": "Base Set 2", "price_jpy": 3200000, "image": "https://images.pokemontcg.io/base1/4_hires.png", "backup_image": "https://images.pokemontcg.io/base1/4.png", "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-base-set-2/charizard-4"},
-            {"rank": 6, "name": "Mewtwo #3", "set": "Base Promo", "price_jpy": 150000, "image": "https://images.pokemontcg.io/basep/3_hires.png", "backup_image": "https://images.pokemontcg.io/basep/3.png", "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-base-promo/mewtwo-3"},
-            {"rank": 7, "name": "Lugia #2", "set": "Pop Series 5", "price_jpy": 250000, "image": "https://images.pokemontcg.io/pop5/2_hires.png", "backup_image": "https://images.pokemontcg.io/pop5/2.png", "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-pop-series-5/lugia-2"},
-            {"rank": 8, "name": "Rayquaza #3", "set": "Pop Series 1", "price_jpy": 200000, "image": "https://images.pokemontcg.io/pop1/3_hires.png", "backup_image": "https://images.pokemontcg.io/pop1/3.png", "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-pop-series-1/rayquaza-3"},
-            {"rank": 9, "name": "Gardevoir ex #4", "set": "EX Ruby & Sapphire", "price_jpy": 90000, "image": "https://images.pokemontcg.io/ex9/4_hires.png", "backup_image": "https://images.pokemontcg.io/ex9/4.png", "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-ex-ruby-and-sapphire/gardevoir-ex-4"},
-            {"rank": 10, "name": "Pikachu VMAX #44", "set": "Vivid Voltage", "price_jpy": 220000, "image": "https://images.pokemontcg.io/swsh4/44_hires.png", "backup_image": "https://images.pokemontcg.io/swsh4/44.png", "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-vivid-voltage/pikachu-vmax-44"}
+            {
+                "rank": 1, 
+                "name": "Iono SAR (096/071)", 
+                "set": "Clay Burst (拡張パック クレイバースト)", 
+                "price_jpy": 125000, 
+                "image": "https://images.pokemontcg.io/sv2d/96_hires.png", 
+                "backup_image": "https://images.pokemontcg.io/sv2d/96.png", 
+                "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-clay-burst/iono-96",
+                "snkrdunk_url": "https://snkrdunk.com/en/search?keyword=Iono%20SAR%20096/071"
+            },
+            {
+                "rank": 2, 
+                "name": "Charizard ex SAR (349/190)", 
+                "set": "Shiny Treasure ex (ハイクラスパック シャイニートレジャーex)", 
+                "price_jpy": 48000, 
+                "image": "https://images.pokemontcg.io/sv4a/349_hires.png", 
+                "backup_image": "https://images.pokemontcg.io/sv4a/349.png", 
+                "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-shiny-treasure-ex/charizard-ex-349",
+                "snkrdunk_url": "https://snkrdunk.com/en/search?keyword=Charizard%20ex%20SAR%20349/190"
+            },
+            {
+                "rank": 3, 
+                "name": "Mew ex SAR (205/165)", 
+                "set": "Pokemon 151 (強化拡張パック ポケモンカード151)", 
+                "price_jpy": 35000, 
+                "image": "https://images.pokemontcg.io/sv2a/205_hires.png", 
+                "backup_image": "https://images.pokemontcg.io/sv2a/205.png", 
+                "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-151/mew-ex-205",
+                "snkrdunk_url": "https://snkrdunk.com/en/search?keyword=Mew%20ex%20SAR%20205/165"
+            },
+            {
+                "rank": 4, 
+                "name": "Carmine SAR (086/066)", 
+                "set": "Mask of Change (変幻の仮面)", 
+                "price_jpy": 32000, 
+                "image": "https://images.pokemontcg.io/sv6/86_hires.png", 
+                "backup_image": "https://images.pokemontcg.io/sv6/86.png", 
+                "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-mask-of-change/carmine-86",
+                "snkrdunk_url": "https://snkrdunk.com/en/search?keyword=Carmine%20SAR%20086/066"
+            },
+            {
+                "rank": 5, 
+                "name": "Terapagos ex SAR (131/102)", 
+                "set": "Stellar Miracle (ステラミラクル)", 
+                "price_jpy": 24000, 
+                "image": "https://images.pokemontcg.io/sv7/131_hires.png", 
+                "backup_image": "https://images.pokemontcg.io/sv7/131.png", 
+                "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-stellar-miracle/terapagos-ex-131",
+                "snkrdunk_url": "https://snkrdunk.com/en/search?keyword=Terapagos%20ex%20SAR%20131/102"
+            },
+            {
+                "rank": 6, 
+                "name": "Umbreon VMAX HR SA (095/069)", 
+                "set": "Eevee Heroes (イーブイヒーローズ)", 
+                "price_jpy": 280000, 
+                "image": "https://images.pokemontcg.io/s6a/95_hires.png", 
+                "backup_image": "https://images.pokemontcg.io/s6a/95.png", 
+                "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-eevee-heroes/umbreon-vmax-95",
+                "snkrdunk_url": "https://snkrdunk.com/en/search?keyword=Umbreon%20VMAX%20095/069"
+            },
+            {
+                "rank": 7, 
+                "name": "Charizard ex SAR (134/108)", 
+                "set": "Ruler of the Black Flame (黒炎の支配者)", 
+                "price_jpy": 42000, 
+                "image": "https://images.pokemontcg.io/sv3/134_hires.png", 
+                "backup_image": "https://images.pokemontcg.io/sv3/134.png", 
+                "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-ruler-of-black-flame/charizard-ex-134",
+                "snkrdunk_url": "https://snkrdunk.com/en/search?keyword=Charizard%20ex%20SAR%20134/108"
+            },
+            {
+                "rank": 8, 
+                "name": "Gardevoir ex SAR (348/190)", 
+                "set": "Shiny Treasure ex (ハイクラスパック シャイニートレジャーex)", 
+                "price_jpy": 38000, 
+                "image": "https://images.pokemontcg.io/sv4a/348_hires.png", 
+                "backup_image": "https://images.pokemontcg.io/sv4a/348.png", 
+                "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-shiny-treasure-ex/gardevoir-ex-348",
+                "snkrdunk_url": "https://snkrdunk.com/en/search?keyword=Gardevoir%20ex%20SAR%20348/190"
+            },
+            {
+                "rank": 9, 
+                "name": "Greninja ex SAR (090/066)", 
+                "set": "Crimson Haze (クリムゾンヘイズ)", 
+                "price_jpy": 34000, 
+                "image": "https://images.pokemontcg.io/sv5a/90_hires.png", 
+                "backup_image": "https://images.pokemontcg.io/sv5a/90.png", 
+                "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-crimson-haze/greninja-ex-90",
+                "snkrdunk_url": "https://snkrdunk.com/en/search?keyword=Greninja%20ex%20SAR%20090/066"
+            },
+            {
+                "rank": 10, 
+                "name": "Munkidori AR (069/064)", 
+                "set": "Night Wanderer (ナイトワンダラー)", 
+                "price_jpy": 8000, 
+                "image": "https://images.pokemontcg.io/sv6a/69_hires.png", 
+                "backup_image": "https://images.pokemontcg.io/sv6a/69.png", 
+                "pricecharting_url": "https://www.pricecharting.com/game/pokemon-japanese-night-wanderer/munkidori-69",
+                "snkrdunk_url": "https://snkrdunk.com/en/search?keyword=Munkidori%20AR%20069/064"
+            }
         ]
     else:
         return [
             {
                 "rank": 1, 
-                "name": "Monkey D. Luffy (ลูฟี่ การ์ดมังกะ) #OP05-119 SEC", 
-                "set": "Awakening of the New Era", 
+                "name": "Monkey D. Luffy Manga #OP05-119 SEC", 
+                "set": "Awakening of the New Era (新時代の主役)", 
                 "price_jpy": 550000, 
                 "image": "https://storage.googleapis.com/images.pricecharting.com/hcn3n7lf2oftjsnh/240.jpg",
                 "backup_image": "https://storage.googleapis.com/images.pricecharting.com/hcn3n7lf2oftjsnh/120.jpg",
-                "pricecharting_url": "https://www.pricecharting.com/game/one-piece-japanese-awakening-of-the-new-era/monkey-d-luffy-manga-op05-119"
+                "pricecharting_url": "https://www.pricecharting.com/game/one-piece-japanese-awakening-of-the-new-era/monkey-d-luffy-manga-op05-119",
+                "snkrdunk_url": "https://snkrdunk.com/en/search?keyword=Monkey%20D.%20Luffy%20OP05-119"
             },
             {
                 "rank": 2, 
-                "name": "Portgas D. Ace (เอส การ์ดมังกะ) #OP02-120 SEC", 
-                "set": "Paramount War", 
+                "name": "Portgas D. Ace Manga #OP02-120 SEC", 
+                "set": "Paramount War (頂上決戦)", 
                 "price_jpy": 320000, 
                 "image": "https://storage.googleapis.com/images.pricecharting.com/fypdjx6jicnhz5bl/240.jpg",
                 "backup_image": "https://storage.googleapis.com/images.pricecharting.com/fypdjx6jicnhz5bl/120.jpg",
-                "pricecharting_url": "https://www.pricecharting.com/game/one-piece-japanese-paramount-war/portgas-d-ace-manga-op02-120"
+                "pricecharting_url": "https://www.pricecharting.com/game/one-piece-japanese-paramount-war/portgas-d-ace-manga-op02-120",
+                "snkrdunk_url": "https://snkrdunk.com/en/search?keyword=Portgas%20D.%20Ace%20OP02-120"
+            },
+            {
+                "rank": 3, 
+                "name": "Shanks Manga #OP01-120 SEC", 
+                "set": "Romance Dawn (ROMANCE DAWN)", 
+                "price_jpy": 240000, 
+                "image": "https://storage.googleapis.com/images.pricecharting.com/7bvy31plnuhb9rpl/240.jpg",
+                "backup_image": "https://storage.googleapis.com/images.pricecharting.com/7bvy31plnuhb9rpl/120.jpg",
+                "pricecharting_url": "https://www.pricecharting.com/game/one-piece-japanese-romance-dawn/shanks-manga-op01-120",
+                "snkrdunk_url": "https://snkrdunk.com/en/search?keyword=Shanks%20OP01-120"
+            },
+            {
+                "rank": 4, 
+                "name": "Roronoa Zoro Manga #OP06-118 SEC", 
+                "set": "Wings of the Captain (双璧の覇者)", 
+                "price_jpy": 210000, 
+                "image": "https://storage.googleapis.com/images.pricecharting.com/zcd67wflnuy2sqd1/240.jpg",
+                "backup_image": "https://storage.googleapis.com/images.pricecharting.com/zcd67wflnuy2sqd1/120.jpg",
+                "pricecharting_url": "https://www.pricecharting.com/game/one-piece-japanese-wings-of-captain/roronoa-zoro-manga-op06-118",
+                "snkrdunk_url": "https://snkrdunk.com/en/search?keyword=Roronoa%20Zoro%20OP06-118"
+            },
+            {
+                "rank": 5, 
+                "name": "Boa Hancock Manga #OP07-109 SEC", 
+                "set": "500 Years in the Future (500年後の未来)", 
+                "price_jpy": 190000, 
+                "image": "https://storage.googleapis.com/images.pricecharting.com/oaec1dofjtodqsz1/240.jpg",
+                "backup_image": "https://storage.googleapis.com/images.pricecharting.com/oaec1dofjtodqsz1/120.jpg",
+                "pricecharting_url": "https://www.pricecharting.com/game/one-piece-japanese-500-years-in-the-future/boa-hancock-manga-op07-109",
+                "snkrdunk_url": "https://snkrdunk.com/en/search?keyword=Boa%20Hancock%20OP07-109"
+            },
+            {
+                "rank": 6, 
+                "name": "Silvers Rayleigh Manga #OP08-119 SEC", 
+                "set": "Two Legends (二つの伝説)", 
+                "price_jpy": 160000, 
+                "image": "https://storage.googleapis.com/images.pricecharting.com/750r67wflnuf2szd/240.jpg",
+                "backup_image": "https://storage.googleapis.com/images.pricecharting.com/750r67wflnuf2szd/120.jpg",
+                "pricecharting_url": "https://www.pricecharting.com/game/one-piece-japanese-two-legends/silvers-rayleigh-manga-op08-119",
+                "snkrdunk_url": "https://snkrdunk.com/en/search?keyword=Silvers%20Rayleigh%20OP08-119"
+            },
+            {
+                "rank": 7, 
+                "name": "Sabo Manga #OP04-083 SR", 
+                "set": "Kingdoms of Intrigue (謀略の王国)", 
+                "price_jpy": 150000, 
+                "image": "https://storage.googleapis.com/images.pricecharting.com/oae67wflnuy2s1d2/240.jpg",
+                "backup_image": "https://storage.googleapis.com/images.pricecharting.com/oae67wflnuy2s1d2/120.jpg",
+                "pricecharting_url": "https://www.pricecharting.com/game/one-piece-japanese-kingdoms-of-intrigue/sabo-manga-op04-083",
+                "snkrdunk_url": "https://snkrdunk.com/en/search?keyword=Sabo%20OP04-083"
+            },
+            {
+                "rank": 8, 
+                "name": "Sogeking Manga #OP03-122 SEC", 
+                "set": "Pillars of Strength (強大な敵)", 
+                "price_jpy": 130000, 
+                "image": "https://storage.googleapis.com/images.pricecharting.com/oae67wflnuy2s1d3/240.jpg",
+                "backup_image": "https://storage.googleapis.com/images.pricecharting.com/oae67wflnuy2s1d3/120.jpg",
+                "pricecharting_url": "https://www.pricecharting.com/game/one-piece-japanese-pillars-of-strength/sogeking-manga-op03-122",
+                "snkrdunk_url": "https://snkrdunk.com/en/search?keyword=Sogeking%20OP03-122"
+            },
+            {
+                "rank": 9, 
+                "name": "Gol D. Roger Manga #OP09-119 SEC", 
+                "set": "The New Emperor (新たなる皇帝)", 
+                "price_jpy": 250000, 
+                "image": "https://storage.googleapis.com/images.pricecharting.com/oae67wflnuy2s1d5/240.jpg",
+                "backup_image": "https://storage.googleapis.com/images.pricecharting.com/oae67wflnuy2s1d5/120.jpg",
+                "pricecharting_url": "https://www.pricecharting.com/game/one-piece-japanese-the-new-emperor/gol-d-roger-manga-op09-119",
+                "snkrdunk_url": "https://snkrdunk.com/en/search?keyword=Gol%20D.%20Roger%20OP09-119"
+            },
+            {
+                "rank": 10, 
+                "name": "Eustass Character Kid Manga #OP05-060 SR", 
+                "set": "Awakening of the New Era (新時代の主役)", 
+                "price_jpy": 110000, 
+                "image": "https://storage.googleapis.com/images.pricecharting.com/oae67wflnuy2s1d4/240.jpg",
+                "backup_image": "https://storage.googleapis.com/images.pricecharting.com/oae67wflnuy2s1d4/120.jpg",
+                "pricecharting_url": "https://www.pricecharting.com/game/one-piece-japanese-awakening-of-the-new-era/eustass-character-kid-manga-op05-060",
+                "snkrdunk_url": "https://snkrdunk.com/en/search?keyword=Eustass%20Kid%20OP05-060"
             }
         ]
+
 
 
 def _slugify(text: str) -> str:
@@ -360,6 +534,16 @@ def render_card_grid(cards, game_type):
                                     st.link_button("🌐 ดูประวัติบน PriceCharting", card["pricecharting_url"], type="secondary", use_container_width=True)
                                 except Exception:
                                     st.markdown(f"[🌐 ดูประวัติบน PriceCharting]({card['pricecharting_url']})")
+                            
+                            # ปุ่มนำทางไปยัง SNKRDUNK
+                            snkrdunk_url = card.get("snkrdunk_url")
+                            if not snkrdunk_url:
+                                snkrdunk_url = f"https://snkrdunk.com/en/search?keyword={quote(card['name'])}"
+                            try:
+                                st.link_button("👟 ดูราคาบน SNKRDUNK (Real-time)", snkrdunk_url, type="primary", use_container_width=True)
+                            except Exception:
+                                st.markdown(f"[👟 ดูราคาบน SNKRDUNK (Real-time)]({snkrdunk_url})")
+
                             if card.get("price_used") is not None or card.get("price_new") is not None or card.get("price_cib") is not None:
                                 prices = []
                                 if card.get("price_used") is not None:
