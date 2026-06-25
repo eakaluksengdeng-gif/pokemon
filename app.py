@@ -187,20 +187,14 @@ def search_pricecharting_products(search_text, game_type, limit=10):
         return []
 
 # ตัวเลือกหน้าเว็บหลัก
-game = st.selectbox("เลือกประเภทการ์ดเกม:", ["Pokémon TCG", "One Piece Card Game"])
+view_mode = st.selectbox("เลือกการแสดงผล:", ["ทั้งสองเกม", "Pokémon TCG", "One Piece Card Game"])
 use_live = st.checkbox("🔁 ใช้ข้อมูลฮิตจาก PokéTCG (PoC, ฟรี)", value=False)
 if use_live:
     st.caption("โหมด PoC: คำนวณความฮิตจากเมตาดาต้า PokéTCG (ไม่มีข้อมูลตลาดจริง)")
-use_scrape = st.checkbox("🔍 ใช้ Scraping (eBay sold listings) เพื่อวัดฮิตจริง (PoC)", value=False)
-if use_scrape:
-    st.caption("โหมด Scrape: จะส่งคำขอไปยัง eBay เพื่อคำนวนจำนวนรายการขาย (อาจถูกบล็อก/เปลี่ยนผลได้)")
 use_pricecharting = st.checkbox("🔎 ใช้ PriceCharting Search/Market Data", value=False)
 if use_pricecharting:
     st.caption("โหมด PriceCharting: ดึงผลการค้นหาและราคาในตลาดจริงจาก PriceCharting.com")
 search = st.text_input("🔍 ค้นหาเจาะจงชื่อการ์ด (เช่น Pikachu, Luffy, Iono):")
-
-# เรียกข้อมูลการ์ดจริงที่จับคู่เรียบร้อยแล้ว
-all_cards = get_verified_tcg_cards(game)
 
 CACHE_FILE = "popular_cache.json"
 
@@ -217,6 +211,21 @@ def _save_cache(data):
             json.dump(data, f)
     except Exception:
         pass
+
+
+def _daily_cache_get(key):
+    cache = _load_cache()
+    item = cache.get(key)
+    if item and item.get("date") == datetime.now().strftime("%Y-%m-%d"):
+        return item.get("data")
+    return None
+
+
+def _daily_cache_set(key, data):
+    cache = _load_cache()
+    cache[key] = {"date": datetime.now().strftime("%Y-%m-%d"), "data": data}
+    _save_cache(cache)
+
 
 def get_live_popular_cards(limit=10, force_refresh=False):
     # PoC: ใช้ PokéTCG API เพื่อดึงเมตาดาต้าการ์ดยอดนิยมตามชื่อคีย์เวิร์ด
@@ -283,171 +292,129 @@ def get_live_popular_cards(limit=10, force_refresh=False):
     _save_cache({"ts": now, "data": results})
     return results
 
-if use_pricecharting:
-    pricecharting_cards = search_pricecharting_products(search, game, limit=10)
-    if pricecharting_cards:
-        all_cards = pricecharting_cards
+def get_daily_trending_cards(game_type, limit=10, force_refresh=False, search_text="", use_pricecharting=False, use_live=False):
+    cache_key = f"daily_trending:{game_type}:{search_text or 'default'}"
+    if not force_refresh:
+        cached = _daily_cache_get(cache_key)
+        if cached is not None:
+            return cached[:limit]
+
+    cards = []
+    if use_pricecharting:
+        cards = search_pricecharting_products(search_text, game_type, limit=limit)
+    elif game_type == "Pokémon TCG" and use_live:
+        cards = get_live_popular_cards(limit=limit, force_refresh=force_refresh) or get_verified_tcg_cards(game_type)
     else:
-        st.warning("ไม่พบผลการค้นหาจาก PriceCharting สำหรับคำค้นหานี้")
+        cards = get_verified_tcg_cards(game_type)
 
-if use_live and game == "Pokémon TCG":
-    live = get_live_popular_cards(limit=10)
-    if live:
-        all_cards = live
+    cards = cards[:limit]
+    _daily_cache_set(cache_key, cards)
+    return cards
 
-if use_scrape and game == "Pokémon TCG":
-    # Scrape eBay sold listings for each card name to estimate popularity (PoC)
-    def scrape_ebay_count(query):
-        try:
-            q = query.replace(' ', '+')
-            url = f"https://www.ebay.com/sch/i.html?_nkw={q}&_sop=10&LH_Sold=1&LH_Complete=1"
-            headers = {"User-Agent": "Mozilla/5.0 (compatible; TopJPNBot/1.0)"}
-            resp = requests.get(url, headers=headers, timeout=10)
-            if resp.status_code != 200:
-                return 0
-            soup = BeautifulSoup(resp.text, 'html.parser')
-            # attempt to find results count text
-            text = ''
-            h = soup.find('h1')
-            if h:
-                text = h.get_text(separator=' ')
-            if not text:
-                text = soup.get_text()[:2000]
-            m = re.search(r"([0-9,]+) results", text)
-            if not m:
-                m = re.search(r"([0-9,]+) sold", text)
-            if m:
-                return int(m.group(1).replace(',', ''))
-            # fallback: count listing items
-            items = soup.select('.srp-results .s-item')
-            return len(items) if items else 0
-        except Exception:
-            return 0
 
-    scraped = []
-    for card in all_cards:
-        name = card.get('name')
-        count = scrape_ebay_count(name)
-        scraped.append({
-            'rank': card.get('rank', 0),
-            'name': name,
-            'set': card.get('set'),
-            'price_jpy': card.get('price_jpy', 0),
-            'image': card.get('image'),
-            'backup_image': card.get('backup_image'),
-            'sales_count': count,
-            'pricecharting_url': card.get('pricecharting_url', '')
-        })
-    scraped = sorted(scraped, key=lambda x: x['sales_count'], reverse=True)
-    for i, s in enumerate(scraped, start=1):
-        s['rank'] = i
-    all_cards = scraped
+def render_card_grid(cards, game_type):
+    for index in range(0, len(cards), 2):
+        cols = st.columns(2)
+        for sub_idx, card_col in enumerate(cols):
+            if index + sub_idx < len(cards):
+                card = cards[index + sub_idx]
+                display_price = card.get("price_jpy") or card.get("price_used") or card.get("price_new") or 0
+                price_thb = (display_price / 100) * exchange_rate_jpy
+                if use_pricecharting and card.get("price_used") is not None:
+                    baseline_price_jpy = int(card["price_used"] * 140)
+                else:
+                    baseline_price_jpy = int(display_price)
+                live_fluctuation = random.randint(-800, 800)
+                current_price_jpy = int(baseline_price_jpy + live_fluctuation)
 
-# ระบบค้นหาคำกรอง
-if search and not use_pricecharting:
-    all_cards = [c for c in all_cards if search.lower() in c["name"].lower()]
+                if card.get("price_used") is not None or card.get("price_new") is not None or card.get("price_cib") is not None:
+                    trend_values = [v for v in [card.get("price_used"), card.get("price_cib"), card.get("price_new")] if v is not None]
+                    trend_labels = [label for label, v in [("Used", card.get("price_used")), ("CIB", card.get("price_cib")), ("New", card.get("price_new"))] if v is not None]
+                else:
+                    trend_values = [int(display_price * 0.96), int(display_price * 0.98), int(display_price)]
+                    trend_labels = ['ดีล 1', 'ดีล 2', 'ล่าสุด']
 
-st.subheader(f"📋 ข่าวสารการ์ดฮิตประจำวันที่ {datetime.now().strftime('%d/%m/%Y')}")
-st.caption("ติดตามราคาการ์ด Pokémon และ One Piece ที่กำลังมาแรง พร้อมดูความเปลี่ยนแปลงราคาที่เกิดขึ้นวันนี้")
+                percent_change = 0
+                if baseline_price_jpy > 0:
+                    percent_change = ((current_price_jpy - baseline_price_jpy) / baseline_price_jpy) * 100
 
-# วนลูปแสดงผลสไตล์แผงกริด แถวละ 2 กล่องแบบสวยงาม
-for index in range(0, len(all_cards), 2):
-    cols = st.columns(2)
-    
-    for sub_idx, card_col in enumerate(cols):
-        if index + sub_idx < len(all_cards):
-            card = all_cards[index + sub_idx]
-            display_price = card.get("price_jpy") or card.get("price_used") or card.get("price_new") or 0
-            price_thb = (display_price / 100) * exchange_rate_jpy
-            
-            # จำลองราคาแกว่งล่าสุดเล็กน้อยเพื่อให้กราฟขยับดูสมจริง
-            live_fluctuation = random.randint(-800, 800)
-            current_price_jpy = int(display_price + live_fluctuation)
-            if use_pricecharting and card.get("price_used") is not None:
-                current_price_jpy = int(card["price_used"] * 140)
-            
-            if card.get("price_used") is not None or card.get("price_new") is not None or card.get("price_cib") is not None:
-                trend_values = [v for v in [card.get("price_used"), card.get("price_cib"), card.get("price_new")] if v is not None]
-                trend_labels = [label for label, v in [("Used", card.get("price_used")), ("CIB", card.get("price_cib")), ("New", card.get("price_new"))] if v is not None]
-            else:
-                trend_values = [int(display_price * 0.96), int(display_price * 0.98), int(display_price)]
-                trend_labels = ['ดีล 1', 'ดีล 2', 'ล่าสุด']
-
-            if use_pricecharting and card.get("price_used") is not None:
-                baseline_price_jpy = int(card["price_used"] * 140)
-            else:
-                baseline_price_jpy = int(display_price)
-            
-            live_fluctuation = random.randint(-800, 800)
-            current_price_jpy = int(baseline_price_jpy + live_fluctuation)
-            percent_change = 0
-            if baseline_price_jpy > 0:
-                percent_change = ((current_price_jpy - baseline_price_jpy) / baseline_price_jpy) * 100
-            
-            with card_col:
-                with st.container(border=True):
-                    sub_c1, sub_c2 = st.columns([1, 1.5])
-                    with sub_c1:
-                        st.write(f"🏆 **อันดับ {card['rank']}")
-
-                        # โหลดรูปจากไฟล์ท้องถิ่น (images/) ก่อน หากไม่เจอค่อยใช้ URL สำรอง
-                        local_path = f"images/{_slugify(card['name'])}.png"
-                        if os.path.exists(local_path):
-                            st.image(local_path, width=140)
-                        else:
-                            try:
-                                st.image(card["image"], width=140)
-                            except:
-                                st.image(card["backup_image"], width=140)
-                            
-                    with sub_c2:
-                        st.markdown(f"##### **{card['name']}**")
-                        st.caption(f"📦 ชุด: {card['set']} | สภาพ: PSA 10 🇯🇵")
-                        
-                        # 🌟 ส่วนที่เพิ่มเข้ามาใหม่: ปุ่มกดลิงก์ไปยัง PriceCharting ของการ์ดใบนั้นๆ
-                        if card.get("pricecharting_url"):
-                            try:
-                                st.link_button("🌐 ดูประวัติบน PriceCharting", card["pricecharting_url"], type="secondary", use_container_width=True)
-                            except Exception:
-                                st.markdown(f"[🌐 ดูประวัติบน PriceCharting]({card['pricecharting_url']})")
-                        
-                        # แสดงราคา PriceCharting หากมีข้อมูล
-                        if card.get("price_used") is not None or card.get("price_new") is not None or card.get("price_cib") is not None:
-                            prices = []
-                            if card.get("price_used") is not None:
-                                prices.append(f"Used: ${card['price_used']:.2f}")
-                            if card.get("price_new") is not None:
-                                prices.append(f"New: ${card['price_new']:.2f}")
-                            if card.get("price_cib") is not None:
-                                prices.append(f"CIB: ${card['price_cib']:.2f}")
-                            st.write("💲 PriceCharting: " + ", ".join(prices))
-                        
-                        st.metric(label="ราคาล่าสุดในญี่ปุ่น", value=f"¥{current_price_jpy:,} JPY", delta=f"{percent_change:+.1f}%")
-                        st.write(f"💵 เงินไทยประมาณ: `{price_thb:,.0f} THB`")
-                        
-                        # แสดงรูปภาพขนาดใหญ่สำหรับการ์ด Pokémon: ใช้ไฟล์ท้องถิ่นก่อน ถ้าไม่มีค่อยใช้ URL
-                        if game == "Pokémon TCG":
-                            large_local = f"images/{_slugify(card['name'])}_large.png"
-                            if os.path.exists(large_local):
-                                st.image(large_local, width=220)
-                            elif os.path.exists(local_path):
-                                st.image(local_path, width=220)
+                with card_col:
+                    with st.container(border=True):
+                        sub_c1, sub_c2 = st.columns([1, 1.5])
+                        with sub_c1:
+                            st.write(f"🏆 **อันดับ {card['rank']}")
+                            local_path = f"images/{_slugify(card['name'])}.png"
+                            if os.path.exists(local_path):
+                                st.image(local_path, width=140)
                             else:
                                 try:
-                                    st.image(card["image"], width=220)
+                                    st.image(card["image"], width=140)
                                 except:
-                                    st.image(card["backup_image"], width=220)
+                                    st.image(card["backup_image"], width=140)
 
-                        # สร้างประวัติกราฟเทรนด์ของแต่ละใบ
-                        trend_df = pd.DataFrame({'ราคา': trend_values}, index=trend_labels)
-                        fig = px.line(trend_df, y='ราคา', markers=True, color_discrete_sequence=['#FF4B4B'])
-                        fig.update_layout(
-                            height=120,
-                            margin=dict(l=0, r=0, t=0, b=0),
-                            xaxis_title=None,
-                            yaxis_title=None,
-                            xaxis=dict(tickmode='array', tickvals=list(range(len(trend_labels)),), ticktext=trend_labels)
-                        )
-                        
-                        unique_key = f"chart_{game}_{card['rank']}_{card['name'].replace(' ', '_')}"
-                        st.plotly_chart(fig, use_container_width=True, key=unique_key)
+                        with sub_c2:
+                            st.markdown(f"##### **{card['name']}**")
+                            st.caption(f"📦 ชุด: {card['set']} | สภาพ: PSA 10 🇯🇵")
+                            if card.get("pricecharting_url"):
+                                try:
+                                    st.link_button("🌐 ดูประวัติบน PriceCharting", card["pricecharting_url"], type="secondary", use_container_width=True)
+                                except Exception:
+                                    st.markdown(f"[🌐 ดูประวัติบน PriceCharting]({card['pricecharting_url']})")
+                            if card.get("price_used") is not None or card.get("price_new") is not None or card.get("price_cib") is not None:
+                                prices = []
+                                if card.get("price_used") is not None:
+                                    prices.append(f"Used: ${card['price_used']:.2f}")
+                                if card.get("price_new") is not None:
+                                    prices.append(f"New: ${card['price_new']:.2f}")
+                                if card.get("price_cib") is not None:
+                                    prices.append(f"CIB: ${card['price_cib']:.2f}")
+                                st.write("💲 PriceCharting: " + ", ".join(prices))
+                            st.metric(label="ราคาล่าสุดในญี่ปุ่น", value=f"¥{current_price_jpy:,} JPY", delta=f"{percent_change:+.1f}%")
+                            st.write(f"💵 เงินไทยประมาณ: `{price_thb:,.0f} THB`")
+                            if game_type == "Pokémon TCG":
+                                large_local = f"images/{_slugify(card['name'])}_large.png"
+                                if os.path.exists(large_local):
+                                    st.image(large_local, width=220)
+                                elif os.path.exists(local_path):
+                                    st.image(local_path, width=220)
+                                else:
+                                    try:
+                                        st.image(card["image"], width=220)
+                                    except:
+                                        st.image(card["backup_image"], width=220)
+                            trend_df = pd.DataFrame({'ราคา': trend_values}, index=trend_labels)
+                            fig = px.line(trend_df, y='ราคา', markers=True, color_discrete_sequence=['#FF4B4B'])
+                            fig.update_layout(
+                                height=120,
+                                margin=dict(l=0, r=0, t=0, b=0),
+                                xaxis_title=None,
+                                yaxis_title=None,
+                                xaxis=dict(tickmode='array', tickvals=list(range(len(trend_labels)),), ticktext=trend_labels)
+                            )
+                            unique_key = f"chart_{game_type}_{card['rank']}_{card['name'].replace(' ', '_')}"
+                            st.plotly_chart(fig, use_container_width=True, key=unique_key)
+
+# ระบบค้นหาคำกรอง
+pokemon_cards = get_daily_trending_cards("Pokémon TCG", limit=10, search_text=search if use_pricecharting else "", use_pricecharting=use_pricecharting, use_live=use_live)
+onepiece_cards = get_daily_trending_cards("One Piece Card Game", limit=10, search_text=search if use_pricecharting else "", use_pricecharting=use_pricecharting)
+
+if search and not use_pricecharting:
+    pokemon_cards = [c for c in pokemon_cards if search.lower() in c["name"].lower()]
+    onepiece_cards = [c for c in onepiece_cards if search.lower() in c["name"].lower()]
+
+st.subheader(f"📋 ข่าวสารการ์ดฮิตประจำวันที่ {datetime.now().strftime('%d/%m/%Y')}")
+st.caption("ติดตามการ์ดฮิต 10 ใบของ Pokémon และ One Piece ประจำสัปดาห์นี้ พร้อมรีเฟรชข้อมูลทุกวัน")
+
+if view_mode in ["ทั้งสองเกม", "Pokémon TCG"]:
+    st.markdown("### 🟦 Pokémon TCG 10 ใบฮิตประจำสัปดาห์")
+    if not pokemon_cards:
+        st.info("ไม่พบการ์ด Pokémon ที่ตรงกับเกณฑ์นี้")
+    else:
+        render_card_grid(pokemon_cards, "Pokémon TCG")
+
+if view_mode in ["ทั้งสองเกม", "One Piece Card Game"]:
+    st.markdown("### 🟦 One Piece Card Game 10 ใบฮิตประจำสัปดาห์")
+    if not onepiece_cards:
+        st.info("ไม่พบการ์ด One Piece ที่ตรงกับเกณฑ์นี้")
+    else:
+        render_card_grid(onepiece_cards, "One Piece Card Game")
